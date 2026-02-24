@@ -2,9 +2,9 @@ name: CEESP Monitor
 
 on:
   schedule:
-    - cron: '0 9 * * *'
-    - cron: '0 14 * * *'
-    - cron: '0 18 * * *'
+    - cron: '0 8 * * *'
+    - cron: '0 13 * * *'
+    - cron: '0 17 * * *'
   workflow_dispatch:
 
 jobs:
@@ -13,20 +13,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Install
         run: pip install -r requirements.txt
 
       - name: Run CEESP monitor
         env:
-          SMTP_USER: ${{ secrets.SMTP_USER }}
-          SMTP_PASS: ${{ secrets.SMTP_PASS }}
-          SMTP_FROM: ${{ secrets.SMTP_FROM }}
-          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          TEAMS_WEBHOOK: ${{ secrets.TEAMS_WEBHOOK }}
         run: python ceesp_monitor.py
 
       - name: Save history
