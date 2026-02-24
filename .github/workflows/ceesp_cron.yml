@@ -1,0 +1,38 @@
+name: CEESP Monitor
+
+on:
+  schedule:
+    - cron: '0 9 * * *'
+    - cron: '0 14 * * *'
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run CEESP monitor
+        env:
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          SMTP_FROM: ${{ secrets.SMTP_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        run: python ceesp_monitor.py
+
+      - name: Save history
+        run: |
+          git config user.name "ceesp-bot"
+          git config user.email "bot@github"
+          git add history.csv
+          git commit -m "Update CEESP history" || echo "No change"
+          git push
