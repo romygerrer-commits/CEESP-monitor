@@ -1,50 +1,42 @@
 import pandas as pd
 import requests
 import os
-from email.message import EmailMessage
-import smtplib
 
 CSV_URL = "https://public.tableau.com/app/profile/has8400/viz/Contributionpatient/Tableaudebord5?:showVizHome=no&:format=csv"
 HISTORY_FILE = "history.csv"
 
 def load_data():
-    df = pd.read_csv(CSV_URL)
-    return df
+    return pd.read_csv(CSV_URL)
 
 def load_history():
-    if os.path.exists(HISTORY_FILE):
+    try:
         return pd.read_csv(HISTORY_FILE)
-    return pd.DataFrame()
+    except:
+        return pd.DataFrame()
 
-def send_email(rows):
-    msg = EmailMessage()
-    msg["Subject"] = "[ALERTE CEESP] Nouveaux avis"
-    msg["From"] = os.environ["SMTP_FROM"]
-    msg["To"] = os.environ["EMAIL_TO"]
+def send_teams(rows):
+    webhook = os.environ["TEAMS_WEBHOOK"]
 
-    body = "Nouveaux avis CEESP:\n\n"
+    text = "🚨 **Nouveaux avis CEESP détectés**\n\n"
     for _, r in rows.iterrows():
-        body += f"{r.get('Nom commercial','')} | {r.get('Indication thérapeutique','')} | {r.get('Date de publication CEESP','')}\n"
+        text += f"- **{r.get('Nom commercial','')}** | {r.get('Indication thérapeutique','')} | {r.get('Date de publication CEESP','')}\n"
 
-    msg.set_content(body)
-
-    with smtplib.SMTP("smtp.office365.com", 587) as s:
-        s.starttls()
-        s.login(os.environ["SMTP_USER"], os.environ["SMTP_PASS"])
-        s.send_message(msg)
+    payload = {"text": text}
+    requests.post(webhook, json=payload)
 
 def main():
     df = load_data()
     old = load_history()
 
-    key = lambda r: str(r)
+    # clé unique par ligne
+    key = lambda r: str(r.values.tolist())
     new_keys = set(df.apply(key, axis=1))
     old_keys = set(old.apply(key, axis=1)) if not old.empty else set()
 
     diff = df[df.apply(key, axis=1).isin(new_keys - old_keys)]
 
     if not diff.empty:
-        send_email(diff)
+        send_teams(diff)
 
     df.to_csv(HISTORY_FILE, index=False)
 
