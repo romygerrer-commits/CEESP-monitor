@@ -77,18 +77,18 @@ def send_teams(rows, col_map):
 
     today = datetime.now().strftime("%d/%m/%Y")
 
-    text = f"🏛️ **Nouveaux avis CEESP détectés** ({today})\n\n"
-    text += f"{len(rows)} nouvel(le)(s) avis publié(s)\n\n"
+    text = f"🏛️ **Nouveaux avis CEESP détectés** ({today})\n\n\n"
+    text += f"{len(rows)} avis nouvellement publié(s)\n\n\n"
 
     for i, (_, r) in enumerate(rows.iterrows(), 1):
-        text += f"1️⃣️⃣ {normalize_text(r[col_map['nom']]).upper()}**\n\n"
-        text += f"• DCI : {normalize_text(r[col_map['dci']])}\n\n"
+        text += f"1️⃣️**{normalize_text(r[col_map['nom']]).upper()}**\n\n"
+        text += f"• DCI : **{normalize_text(r[col_map['dci']])}**\n\n"
         text += f"• Indication : {normalize_text(r[col_map['indication']])}\n\n"
 
         if "date" in col_map:
-            text += f"• Date : {normalize_text(r[col_map['date']])}\n"
+            text += f"• Date de validation : {normalize_text(r[col_map['date']])}\n\n"
 
-        text += "\n"
+        text += "\n\n\n"
 
     text += "🔎 Tableau de bord complet :\n"
     text += "https://public.tableau.com/views/Contributionpatient/Tableaudebord5\n"
