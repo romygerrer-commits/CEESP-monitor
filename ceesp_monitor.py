@@ -81,12 +81,14 @@ def send_teams(rows, col_map):
 
     if count > 1:
         text += f"{count} nouveaux avis publiés\n\n"
+        text += "\n\u200b\n"
     else:
         text += "1 nouvel avis publié\n\n"
+        text += "\n\u200b\n"
 
     for i, (_, r) in enumerate(rows.iterrows(), 1):
         text += "\n\u200b\n"
-        text += f"1️⃣️**{normalize_text(r[col_map['nom']]).upper()}**\n\n"
+        text += f"1️⃣️{normalize_text(r[col_map['nom']]).upper()}\n\n"
         text += f"• DCI : **{normalize_text(r[col_map['dci']])}**\n\n"
         text += f"• Indication : {normalize_text(r[col_map['indication']])}\n\n"
 
