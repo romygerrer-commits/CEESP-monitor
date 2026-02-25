@@ -55,10 +55,14 @@ def main():
     df = load_data()
     old = load_history()
 
+    # On force tout en string et on remplace les NaN
     df = df.fillna("").astype(str)
 
+    if not old.empty:
+        old = old.fillna("").astype(str)
+
     def key(row):
-        return "|".join(row.values.tolist())
+        return "|".join(row.astype(str).tolist())
 
     new_keys = set(df.apply(key, axis=1))
     old_keys = set(old.apply(key, axis=1)) if not old.empty else set()
