@@ -78,7 +78,12 @@ def send_teams(rows, col_map):
     today = datetime.now().strftime("%d/%m/%Y")
 
     text = f"🏛️ **Nouveaux avis CEESP détectés** ({today})\n\n\n"
-    text += f"{len(rows)} avis nouvellement publié(s)\n\n\n"
+    count = len(rows)
+
+if count > 1:
+    text += f"{count} nouveaux avis publiés\n\n\n<br>"
+else:
+    text += f"{count} nouvel avis publié\n\n\n<br>"
 
     for i, (_, r) in enumerate(rows.iterrows(), 1):
         text += f"1️⃣️**{normalize_text(r[col_map['nom']]).upper()}**\n\n"
