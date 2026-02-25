@@ -11,14 +11,25 @@ def load_data():
     r = requests.get(CSV_URL, headers=headers)
     r.raise_for_status()
 
-    # Tableau CSV is dirty -> robust parser
-    return pd.read_csv(
+    df = pd.read_csv(
         StringIO(r.text),
         sep=",",
         engine="python",
         quotechar='"',
         on_bad_lines="skip"
     )
+
+    # On garde uniquement les colonnes utiles (si elles existent)
+    expected_cols = [
+        "Nom commercial",
+        "Dénomination commune internationale",
+        "Indication thérapeutique",
+        "Date de publication CEESP"
+    ]
+
+    df = df[[c for c in expected_cols if c in df.columns]]
+
+    return df
 
 def load_history():
     try:
@@ -28,14 +39,15 @@ def load_history():
 
 def send_teams(rows):
     webhook = os.environ["TEAMS_WEBHOOK"]
+
     text = "🚨 **Nouveaux avis CEESP détectés**\n\n"
 
     for _, r in rows.iterrows():
-        text += f"**Nom**: {r.get('Nom commercial','')}\n"
-        text += f"DCI: {r.get('DCI','')}\n"
-        text += f"Indication: {r.get('Indication','')}\n"
-        text += f"Date: {r.get('Date','')}\n"
-        text += "----------------------\n"
+        text += f"**{r['Nom commercial']}**\n"
+        text += f"DCI : {r['Dénomination commune internationale']}\n"
+        text += f"Indication : {r['Indication thérapeutique']}\n"
+        text += f"Date : {r['Date de publication CEESP']}\n"
+        text += "--------------------------\n"
 
     requests.post(webhook, json={"text": text})
 
@@ -43,7 +55,6 @@ def main():
     df = load_data()
     old = load_history()
 
-    # normalize
     df = df.fillna("").astype(str)
 
     def key(row):
