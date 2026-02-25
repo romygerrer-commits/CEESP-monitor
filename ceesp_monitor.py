@@ -7,22 +7,36 @@ CSV_URL = "https://public.tableau.com/app/profile/has8400/viz/Contributionpatien
 HISTORY_FILE = "history.csv"
 
 def load_data():
-    headers = {"User-Agent": "Mozilla/5.0"}
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "text/csv"
+    }
+
     r = requests.get(CSV_URL, headers=headers)
     r.raise_for_status()
+
+    # Sécurité : vérifier qu'on reçoit bien du CSV
+    if "<!DOCTYPE html>" in r.text:
+        raise Exception("Tableau returned HTML instead of CSV (blocked request)")
 
     from io import StringIO
     df = pd.read_csv(
         StringIO(r.text),
         sep=",",
         engine="python",
-        quotechar='"',
-        on_bad_lines="skip"
+        quotechar='"'
     )
 
-    print("RAW COLUMNS:", df.columns.tolist())
-    print("HEAD:")
-    print(df.head())
+    df.columns = (
+        df.columns
+        .str.replace("\ufeff", "", regex=False)
+        .str.strip()
+    )
+
+    df = df.fillna("").astype(str)
+
+    print("COLUMNS:", df.columns.tolist())
+    print("ROWS:", len(df))
 
     return df
 
