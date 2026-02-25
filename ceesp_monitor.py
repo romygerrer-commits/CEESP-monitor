@@ -3,7 +3,7 @@ import requests
 import os
 from datetime import datetime
 
-CSV_URL = "https://public.tableau.com/app/profile/has8400/viz/Contributionpatient/Tableaudebord5?:showVizHome=no&:format=csv"
+CSV_URL = "https://public.tableau.com/views/Contributionpatient/Tableaudebord5?:showVizHome=no&:format=csv"
 
 TEAMS_WEBHOOK = os.environ["TEAMS_WEBHOOK"]
 
@@ -13,13 +13,16 @@ HISTORY_FILE = "history.csv"
 def load_data():
     headers = {
         "User-Agent": "Mozilla/5.0",
-        "Accept": "text/csv"
+        "Accept": "text/csv",
+        "Referer": "https://public.tableau.com/views/Contributionpatient/Tableaudebord5"
     }
 
-    r = requests.get(CSV_URL, headers=headers)
+    r = requests.get(CSV_URL, headers=headers, timeout=30)
     r.raise_for_status()
 
     if "<html" in r.text.lower():
+        print("Received HTML instead of CSV")
+        print(r.text[:500])
         raise Exception("Tableau returned HTML instead of CSV")
 
     df = pd.read_csv(pd.io.common.StringIO(r.text))
