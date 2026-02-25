@@ -1,7 +1,6 @@
 import pandas as pd
 import requests
 import os
-import unicodedata
 from io import StringIO
 
 CSV_URL = "https://public.tableau.com/views/Contributionpatient/Tableaudebord5?:showVizHome=no&:format=csv"
@@ -10,18 +9,14 @@ TEAMS_WEBHOOK = os.environ["TEAMS_WEBHOOK"]
 HISTORY_FILE = "history.csv"
 
 
+def normalize_col(col):
+    return str(col).strip().lower()
+
+
 def normalize_text(text):
     if pd.isna(text):
         return ""
     return str(text).strip()
-
-
-def normalize_col(col):
-    col = str(col).strip()
-    col = unicodedata.normalize("NFKD", col)
-    col = col.encode("ascii", "ignore").decode("utf-8")
-    col = col.lower()
-    return col
 
 
 def load_data():
@@ -49,17 +44,18 @@ def detect_columns(df):
     for col in df.columns:
         if "nom commercial" in col:
             col_map["nom"] = col
-        elif "denomination" in col or col == "dci":
+        elif "commune internationale" in col:
             col_map["dci"] = col
         elif "indication" in col:
             col_map["indication"] = col
-        elif "validation" in col or "date" in col:
+        elif "validation" in col:
             col_map["date"] = col
 
     required = ["nom", "dci", "indication"]
 
     for r in required:
         if r not in col_map:
+            print("Columns available:", df.columns.tolist())
             raise Exception(f"Missing required column: {r}")
 
     return col_map
