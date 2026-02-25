@@ -69,21 +69,29 @@ def make_key(row, col_map):
     )
 
 
+from datetime import datetime
+
 def send_teams(rows, col_map):
     if rows.empty:
         return
 
-    text = "Nouveaux avis CEESP:\n\n"
+    today = datetime.now().strftime("%d/%m/%Y")
 
-    for _, r in rows.iterrows():
-        text += f"Nom commercial: {normalize_text(r[col_map['nom']])}\n"
-        text += f"DCI: {normalize_text(r[col_map['dci']])}\n"
-        text += f"Indication: {normalize_text(r[col_map['indication']])}\n"
+    text = f"🏛️ **Nouveaux avis CEESP détectés** ({today})\n\n"
+    text += f"{len(rows)} nouvel(le)(s) avis publié(s)\n\n"
+
+    for i, (_, r) in enumerate(rows.iterrows(), 1):
+        text += f"1️⃣️⃣ {normalize_text(r[col_map['nom']]).upper()}**\n\n"
+        text += f"• DCI : {normalize_text(r[col_map['dci']])}\n\n"
+        text += f"• Indication : {normalize_text(r[col_map['indication']])}\n\n"
 
         if "date" in col_map:
-            text += f"Date: {normalize_text(r[col_map['date']])}\n"
+            text += f"• Date : {normalize_text(r[col_map['date']])}\n"
 
-        text += "-----------------------------\n"
+        text += "\n"
+
+    text += "🔎 Tableau de bord complet :\n"
+    text += "https://public.tableau.com/views/Contributionpatient/Tableaudebord5\n"
 
     payload = {"text": text}
     requests.post(TEAMS_WEBHOOK, json=payload)
