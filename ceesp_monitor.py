@@ -3,7 +3,7 @@ import requests
 import os
 from io import StringIO
 
-CSV_URL = "https://public.tableau.com/app/profile/has8400/viz/Contributionpatient/Tableaudebord5.csv"
+CSV_URL = "https://public.tableau.com/views/Contributionpatient/Tableaudebord5?:format=csv"
 HISTORY_FILE = "history.csv"
 
 def load_data():
@@ -15,9 +15,8 @@ def load_data():
     r = requests.get(CSV_URL, headers=headers)
     r.raise_for_status()
 
-    # Sécurité : vérifier qu'on reçoit bien du CSV
     if "<!DOCTYPE html>" in r.text:
-        raise Exception("Tableau returned HTML instead of CSV (blocked request)")
+        raise Exception("Tableau returned HTML instead of CSV")
 
     from io import StringIO
     df = pd.read_csv(
