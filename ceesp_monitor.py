@@ -3,7 +3,7 @@ import requests
 import os
 from io import StringIO
 
-CSV_URL = "https://public.tableau.com/app/profile/has8400/viz/Contributionpatient/Tableaudebord5?:showVizHome=no&:format=csv"
+CSV_URL = "https://public.tableau.com/app/profile/has8400/viz/Contributionpatient/Tableaudebord5.csv"
 HISTORY_FILE = "history.csv"
 
 def load_data():
