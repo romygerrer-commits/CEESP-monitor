@@ -77,12 +77,14 @@ def send_teams(rows, col_map):
 
     count = len(rows)
 
-    text = "🏛️ **Nouveaux avis CEESP détectés**\n\n"
+    
 
     if count > 1:
+        text = "🏛️ **Nouveaux avis CEESP détectés**\n\n"
         text += f"{count} nouveaux avis publiés\n\n"
         text += "\n\u200b\n"
     else:
+        text = "🏛️ **Nouvel avis CEESP détecté**\n\n"
         text += "1 nouvel avis publié\n\n"
         text += "\n\u200b\n"
 
