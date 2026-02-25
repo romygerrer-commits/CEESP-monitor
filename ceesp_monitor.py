@@ -38,6 +38,7 @@ def load_data():
         raise Exception("Tableau returned HTML instead of CSV")
 
     df = pd.read_csv(StringIO(r.text))
+    print("RAW COLUMNS:", df.columns.tolist())
 
     # Normalise column names
     df.columns = [normalize_col(c) for c in df.columns]
