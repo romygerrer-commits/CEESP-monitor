@@ -85,6 +85,7 @@ def send_teams(rows, col_map):
         text += "1 nouvel avis publié\n\n\n"
 
     for i, (_, r) in enumerate(rows.iterrows(), 1):
+       text += "\n\u200b\n"
         text += f"1️⃣️**{normalize_text(r[col_map['nom']]).upper()}**\n\n"
         text += f"• DCI : **{normalize_text(r[col_map['dci']])}**\n\n"
         text += f"• Indication : {normalize_text(r[col_map['indication']])}\n\n"
@@ -92,7 +93,7 @@ def send_teams(rows, col_map):
         if "date" in col_map:
             text += f"• Date de validation : {normalize_text(r[col_map['date']])}\n\n"
 
-        text += "\n\n\n"
+        text += "\n\u200b\n"
 
     text += "🔎 Tableau de bord complet :\n"
     text += "https://public.tableau.com/views/Contributionpatient/Tableaudebord5\n"
