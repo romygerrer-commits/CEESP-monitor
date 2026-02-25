@@ -80,9 +80,9 @@ def send_teams(rows, col_map):
     text = "🏛️ **Nouveaux avis CEESP détectés**\n\n"
 
     if count > 1:
-        text += f"{count} nouveaux avis publiés\n\n\n"
+        text += f"{count} nouveaux avis publiés\n\n"
     else:
-        text += "1 nouvel avis publié\n\n\n"
+        text += "1 nouvel avis publié\n\n"
 
     for i, (_, r) in enumerate(rows.iterrows(), 1):
        text += "\n\u200b\n"
