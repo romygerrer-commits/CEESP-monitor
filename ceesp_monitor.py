@@ -95,8 +95,9 @@ def send_teams(rows, col_map):
         if "date" in col_map:
             text += f"• Date de validation : {normalize_text(r[col_map['date']])}\n\n"
 
-        text += "\n\u200b\n"
+    text += "\n\u200b\n"
 
+    text += "\n\u200b\n"
     text += "🔎 Tableau de bord complet :\n"
     text += "https://public.tableau.com/views/Contributionpatient/Tableaudebord5\n"
 
