@@ -11,6 +11,7 @@ def load_data():
     r = requests.get(CSV_URL, headers=headers)
     r.raise_for_status()
 
+    from io import StringIO
     df = pd.read_csv(
         StringIO(r.text),
         sep=",",
@@ -19,15 +20,9 @@ def load_data():
         on_bad_lines="skip"
     )
 
-    # On garde uniquement les colonnes utiles (si elles existent)
-    expected_cols = [
-        "Nom commercial",
-        "Dénomination commune internationale",
-        "Indication thérapeutique",
-        "Date de publication CEESP"
-    ]
-
-    df = df[[c for c in expected_cols if c in df.columns]]
+    print("RAW COLUMNS:", df.columns.tolist())
+    print("HEAD:")
+    print(df.head())
 
     return df
 
