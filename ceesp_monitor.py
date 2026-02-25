@@ -1,12 +1,27 @@
 import pandas as pd
 import requests
 import os
+import unicodedata
 from io import StringIO
 
 CSV_URL = "https://public.tableau.com/views/Contributionpatient/Tableaudebord5?:showVizHome=no&:format=csv"
 
 TEAMS_WEBHOOK = os.environ["TEAMS_WEBHOOK"]
 HISTORY_FILE = "history.csv"
+
+
+def normalize_text(text):
+    if pd.isna(text):
+        return ""
+    return str(text).strip()
+
+
+def normalize_col(col):
+    col = str(col).strip()
+    col = unicodedata.normalize("NFKD", col)
+    col = col.encode("ascii", "ignore").decode("utf-8")
+    col = col.lower()
+    return col
 
 
 def load_data():
@@ -22,31 +37,56 @@ def load_data():
     if "<html" in r.text.lower():
         raise Exception("Tableau returned HTML instead of CSV")
 
-    # IMPORTANT: encoding fix
-    df = pd.read_csv(StringIO(r.content.decode("utf-8", errors="ignore")))
+    df = pd.read_csv(StringIO(r.text))
+    df.columns = [normalize_col(c) for c in df.columns]
 
     return df
 
 
-def make_key(row):
+def detect_columns(df):
+    col_map = {}
+
+    for col in df.columns:
+        if "nom commercial" in col:
+            col_map["nom"] = col
+        elif "denomination" in col or col == "dci":
+            col_map["dci"] = col
+        elif "indication" in col:
+            col_map["indication"] = col
+        elif "validation" in col or "date" in col:
+            col_map["date"] = col
+
+    required = ["nom", "dci", "indication"]
+
+    for r in required:
+        if r not in col_map:
+            raise Exception(f"Missing required column: {r}")
+
+    return col_map
+
+
+def make_key(row, col_map):
     return (
-        str(row["Nom commercial"]).strip() + "|" +
-        str(row["DÃ©nomination Commune Internationale"]).strip() + "|" +
-        str(row["Indication courte (Pathologie?)"]).strip()
+        normalize_text(row[col_map["nom"]]) + "|" +
+        normalize_text(row[col_map["dci"]]) + "|" +
+        normalize_text(row[col_map["indication"]])
     )
 
 
-def send_teams(rows):
+def send_teams(rows, col_map):
     if rows.empty:
         return
 
     text = "Nouveaux avis CEESP:\n\n"
 
     for _, r in rows.iterrows():
-        text += f"Nom commercial: {r['Nom commercial']}\n"
-        text += f"DCI: {r['DÃ©nomination Commune Internationale']}\n"
-        text += f"Indication: {r['Indication courte (Pathologie?)']}\n"
-        text += f"Date: {r['Validation (date)']}\n"
+        text += f"Nom commercial: {normalize_text(r[col_map['nom']])}\n"
+        text += f"DCI: {normalize_text(r[col_map['dci']])}\n"
+        text += f"Indication: {normalize_text(r[col_map['indication']])}\n"
+
+        if "date" in col_map:
+            text += f"Date: {normalize_text(r[col_map['date']])}\n"
+
         text += "-----------------------------\n"
 
     payload = {"text": text}
@@ -55,6 +95,7 @@ def send_teams(rows):
 
 def main():
     df = load_data()
+    col_map = detect_columns(df)
 
     if os.path.exists(HISTORY_FILE):
         old = pd.read_csv(HISTORY_FILE)
@@ -62,13 +103,13 @@ def main():
     else:
         old_keys = set()
 
-    df["key"] = df.apply(make_key, axis=1)
+    df["key"] = df.apply(lambda r: make_key(r, col_map), axis=1)
 
     new_rows = df[~df["key"].isin(old_keys)]
 
     if not new_rows.empty:
         print(f"{len(new_rows)} new CEESP rows detected")
-        send_teams(new_rows)
+        send_teams(new_rows, col_map)
     else:
         print("No new CEESP entries")
 
