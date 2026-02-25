@@ -1,10 +1,14 @@
 import pandas as pd
 import requests
 import os
-from io import StringIO
+from datetime import datetime
 
-CSV_URL = "https://public.tableau.com/views/Contributionpatient/Tableaudebord5?:format=csv"
+CSV_URL = "https://public.tableau.com/app/profile/has8400/viz/Contributionpatient/Tableaudebord5?:showVizHome=no&:format=csv"
+
+TEAMS_WEBHOOK = os.environ["TEAMS_WEBHOOK"]
+
 HISTORY_FILE = "history.csv"
+
 
 def load_data():
     headers = {
@@ -15,75 +19,58 @@ def load_data():
     r = requests.get(CSV_URL, headers=headers)
     r.raise_for_status()
 
-    if "<!DOCTYPE html>" in r.text:
+    if "<html" in r.text.lower():
         raise Exception("Tableau returned HTML instead of CSV")
 
-    from io import StringIO
-    df = pd.read_csv(
-        StringIO(r.text),
-        sep=",",
-        engine="python",
-        quotechar='"'
-    )
-
-    df.columns = (
-        df.columns
-        .str.replace("\ufeff", "", regex=False)
-        .str.strip()
-    )
-
-    df = df.fillna("").astype(str)
-
-    print("COLUMNS:", df.columns.tolist())
-    print("ROWS:", len(df))
-
+    df = pd.read_csv(pd.io.common.StringIO(r.text))
     return df
 
-def load_history():
-    try:
-        return pd.read_csv(HISTORY_FILE)
-    except:
-        return pd.DataFrame()
+
+def make_key(row):
+    return f"{row['Nom commercial']}|{row['Dénomination commune internationale']}|{row['Indication thérapeutique']}"
+
 
 def send_teams(rows):
-    webhook = os.environ["TEAMS_WEBHOOK"]
+    if rows.empty:
+        return
 
-    text = "🚨 **Nouveaux avis CEESP détectés**\n\n"
+    text = "Nouveaux avis CEESP:\n\n"
 
     for _, r in rows.iterrows():
-        text += f"**{r['Nom commercial']}**\n"
-        text += f"DCI : {r['Dénomination commune internationale']}\n"
-        text += f"Indication : {r['Indication thérapeutique']}\n"
-        text += f"Date : {r['Date de publication CEESP']}\n"
-        text += "--------------------------\n"
+        text += f"Nom commercial: {r['Nom commercial']}\n"
+        text += f"DCI: {r['Dénomination commune internationale']}\n"
+        text += f"Indication: {r['Indication thérapeutique']}\n"
+        text += f"Date: {r['Date de publication CEESP']}\n"
+        text += "------------------------\n"
 
-    requests.post(webhook, json={"text": text})
+    payload = {"text": text}
+    requests.post(TEAMS_WEBHOOK, json=payload)
+
 
 def main():
     df = load_data()
-    old = load_history()
 
-    # On force tout en string et on remplace les NaN
-    df = df.fillna("").astype(str)
+    if os.path.exists(HISTORY_FILE):
+        old = pd.read_csv(HISTORY_FILE)
+    else:
+        old = pd.DataFrame()
 
     if not old.empty:
-        old = old.fillna("").astype(str)
-
-    def key(row):
-        return "|".join(row.astype(str).tolist())
-
-    new_keys = set(df.apply(key, axis=1))
-    old_keys = set(old.apply(key, axis=1)) if not old.empty else set()
-
-    diff = df[df.apply(key, axis=1).isin(new_keys - old_keys)]
-
-    if not diff.empty:
-        print(f"{len(diff)} new CEESP rows detected")
-        send_teams(diff)
+        old_keys = set(old.apply(make_key, axis=1))
     else:
-        print("No new CEESP entries")
+        old_keys = set()
 
+    df["key"] = df.apply(make_key, axis=1)
+
+    new_rows = df[~df["key"].isin(old_keys)]
+
+    if not new_rows.empty:
+        print(f"{len(new_rows)} new CEESP rows detected")
+        send_teams(new_rows)
+
+    df.drop(columns=["key"], inplace=True)
     df.to_csv(HISTORY_FILE, index=False)
+
 
 if __name__ == "__main__":
     main()
