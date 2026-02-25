@@ -2,34 +2,11 @@ name: CEESP Monitor
 
 on:
   schedule:
-    - cron: '0 8 * * *'
-    - cron: '0 13 * * *'
-    - cron: '0 17 * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 jobs:
-  run:
+  test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install
-        run: pip install -r requirements.txt
-
-      - name: Run CEESP monitor
-        env:
-          TEAMS_WEBHOOK: ${{ secrets.TEAMS_WEBHOOK }}
-        run: python ceesp_monitor.py
-
-      - name: Save history
-        run: |
-          git config user.name "ceesp-bot"
-          git config user.email "bot@github"
-          git add history.csv
-          git commit -m "Update CEESP history" || echo "No change"
-          git push
+      - run: echo "SCHEDULE RUN at $(date)"
