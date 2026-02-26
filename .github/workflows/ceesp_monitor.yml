@@ -6,7 +6,6 @@ on:
     - cron: '0 13 * * *'
     - cron: '0 17 * * *'
   workflow_dispatch:
-  push:
 
 jobs:
   run:
@@ -34,4 +33,3 @@ jobs:
           git config user.email "bot@github"
           git add history.csv
           git commit -m "Update CEESP history" || echo "No change"
-          git push
