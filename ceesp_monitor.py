@@ -2,17 +2,12 @@ import pandas as pd
 import requests
 import os
 from io import StringIO
-from datetime import datetime
 
 CSV_URL = "https://public.tableau.com/views/Contributionpatient/Tableaudebord5?:showVizHome=no&:format=csv"
 
 TEAMS_WEBHOOK = os.environ["TEAMS_WEBHOOK"]
 HISTORY_FILE = "history.csv"
 
-
-# -----------------------------
-# Normalisation
-# -----------------------------
 
 def normalize_col(col):
     return str(col).strip().lower()
@@ -23,10 +18,6 @@ def normalize_text(text):
         return ""
     return str(text).strip()
 
-
-# -----------------------------
-# Format date français JJ/MM/AAAA
-# -----------------------------
 
 def format_date_fr(value):
     if pd.isna(value):
@@ -39,12 +30,8 @@ def format_date_fr(value):
     except Exception:
         pass
 
-    return str(value)
+    return normalize_text(value)
 
-
-# -----------------------------
-# Chargement CSV depuis Tableau
-# -----------------------------
 
 def load_data():
 
@@ -65,10 +52,6 @@ def load_data():
 
     return df
 
-
-# -----------------------------
-# Détection colonnes
-# -----------------------------
 
 def detect_columns(df):
 
@@ -101,10 +84,6 @@ def detect_columns(df):
     return col_map
 
 
-# -----------------------------
-# Clé unique
-# -----------------------------
-
 def make_key(row, col_map):
 
     return (
@@ -114,10 +93,6 @@ def make_key(row, col_map):
     )
 
 
-# -----------------------------
-# Envoi Teams
-# -----------------------------
-
 def send_teams(rows, col_map):
 
     if rows.empty:
@@ -126,16 +101,14 @@ def send_teams(rows, col_map):
     count = len(rows)
 
     if count > 1:
-
         text = "🏛️ **Nouveaux avis CEESP détectés**\n\n"
         text += f"{count} nouveaux avis publiés\n\n"
+        text += "\n\u200b\n"
 
     else:
-
         text = "🏛️ **Nouvel avis CEESP détecté**\n\n"
         text += "1 nouvel avis publié\n\n"
-
-    text += "\n\u200b\n"
+        text += "\n\u200b\n"
 
     for i, (_, r) in enumerate(rows.iterrows(), 1):
 
@@ -143,14 +116,11 @@ def send_teams(rows, col_map):
 
         nom = normalize_text(r[col_map["nom"]]).upper()
 
-        # Hyperlien si disponible
+        # Ajout hyperlien si disponible
         if "lien" in col_map and pd.notna(r[col_map["lien"]]):
-
             url = normalize_text(r[col_map["lien"]])
             text += f"{i}️⃣ **[{nom}]({url})**\n\n"
-
         else:
-
             text += f"{i}️⃣ **{nom}**\n\n"
 
         text += f"• DCI : {normalize_text(r[col_map['dci']])}\n\n"
@@ -169,15 +139,8 @@ def send_teams(rows, col_map):
 
     payload = {"text": text}
 
-    response = requests.post(TEAMS_WEBHOOK, json=payload)
+    requests.post(TEAMS_WEBHOOK, json=payload)
 
-    if response.status_code != 200:
-        raise Exception(f"Teams webhook error: {response.status_code}")
-
-
-# -----------------------------
-# Programme principal
-# -----------------------------
 
 def main():
 
@@ -186,13 +149,9 @@ def main():
     col_map = detect_columns(df)
 
     if os.path.exists(HISTORY_FILE):
-
         old = pd.read_csv(HISTORY_FILE)
-
         old_keys = set(old["key"])
-
     else:
-
         old_keys = set()
 
     df["key"] = df.apply(lambda r: make_key(r, col_map), axis=1)
@@ -206,15 +165,10 @@ def main():
         send_teams(new_rows, col_map)
 
     else:
-
         print("No new CEESP entries")
 
     df.to_csv(HISTORY_FILE, index=False)
 
-
-# -----------------------------
-# Execution
-# -----------------------------
 
 if __name__ == "__main__":
     main()
