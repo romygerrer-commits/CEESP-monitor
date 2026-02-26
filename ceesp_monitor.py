@@ -119,9 +119,9 @@ def send_teams(rows, col_map):
         # Ajout hyperlien si disponible
         if "lien" in col_map and pd.notna(r[col_map["lien"]]):
             url = normalize_text(r[col_map["lien"]])
-            text += f"{i}️⃣ **[{nom}]({url})**\n\n"
+            text += f"️💊️⃣ [{nom}]({url})\n\n"
         else:
-            text += f"{i}️⃣ **{nom}**\n\n"
+            text += f"{💊️⃣ [{nom}]\n\n"
 
         text += f"• DCI : {normalize_text(r[col_map['dci']])}\n\n"
 
