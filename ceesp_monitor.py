@@ -94,7 +94,7 @@ def send_teams(rows, col_map):
         text += "\n\u200b\n"
         nom = normalize_text(r[col_map['nom']]).upper()
         url = normalize_text(r[col_map['lien']]) if "lien" in col_map else ""
-        text += f"1️⃣️**[{nom}]({url})**\n\n" if url else f"1️⃣️**{nom}**\n\n"
+        text += f"1️⃣️[{nom}]({url})\n\n" if url else f"1️⃣️{nom}\n\n"
         text += f"• DCI : {normalize_text(r[col_map['dci']])}\n\n"
         text += f"• Indication : {normalize_text(r[col_map['indication']])}\n\n"
 
