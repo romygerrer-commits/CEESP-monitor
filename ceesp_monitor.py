@@ -121,7 +121,7 @@ def send_teams(rows, col_map):
             url = normalize_text(r[col_map["lien"]])
             text += f"💊 [{nom}]({url})\n\n"
         else:
-            text += f"️💊{nom}\n\n""
+            text += f"️💊{nom}\n\n"
 
         text += f"• DCI : {normalize_text(r[col_map['dci']])}\n\n"
 
