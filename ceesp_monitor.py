@@ -183,3 +183,6 @@ def main():
     print("Absolute path:", os.path.abspath(HISTORY_FILE))
     print("File exists:", os.path.exists(HISTORY_FILE))
     print("Rows saved:", len(df))
+    print("Total rows Tableau:", len(df))
+    print("Total rows history:", len(old_keys))
+    print("New rows detected:", len(new_rows))
