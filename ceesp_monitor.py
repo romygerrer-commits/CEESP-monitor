@@ -109,7 +109,7 @@ def main():
     df = load_data()
     col_map = detect_columns(df)
 
-    if os.path.exists(HISTORY_FILE):
+    if os.path.exists(HISTORY_FILE) and os.path.getsize(HISTORY_FILE) > 0:
         old = pd.read_csv(HISTORY_FILE)
         old_keys = set(old["key"])
     else:
@@ -126,7 +126,3 @@ def main():
         print("No new CEESP entries")
 
     df.to_csv(HISTORY_FILE, index=False)
-
-
-if __name__ == "__main__":
-    main()
