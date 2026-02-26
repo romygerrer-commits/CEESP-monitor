@@ -149,10 +149,18 @@ def main():
     col_map = detect_columns(df)
 
     if os.path.exists(HISTORY_FILE):
+
         old = pd.read_csv(HISTORY_FILE)
+
         old_keys = set(old["key"])
+
+        print("Existing history rows:", len(old))
+
     else:
+
         old_keys = set()
+
+        print("No history file found, will create one")
 
     df["key"] = df.apply(lambda r: make_key(r, col_map), axis=1)
 
@@ -165,10 +173,13 @@ def main():
         send_teams(new_rows, col_map)
 
     else:
+
         print("No new CEESP entries")
 
+    # FORCE write history file
     df.to_csv(HISTORY_FILE, index=False)
 
-
-if __name__ == "__main__":
-    main()
+    print("history.csv saved")
+    print("Absolute path:", os.path.abspath(HISTORY_FILE))
+    print("File exists:", os.path.exists(HISTORY_FILE))
+    print("Rows saved:", len(df))
