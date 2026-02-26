@@ -77,6 +77,9 @@ def send_teams(rows, col_map):
 
     count = len(rows)
 
+    text = "🏛️ **Nouveaux avis CEESP détectés**\n\n"
+    
+
     if count > 1:
         text = "🏛️ **Nouveaux avis CEESP détectés**\n\n"
         text += f"{count} nouveaux avis publiés\n\n"
@@ -109,7 +112,7 @@ def main():
     df = load_data()
     col_map = detect_columns(df)
 
-    if os.path.exists(HISTORY_FILE) and os.path.getsize(HISTORY_FILE) > 0:
+    if os.path.exists(HISTORY_FILE):
         old = pd.read_csv(HISTORY_FILE)
         old_keys = set(old["key"])
     else:
@@ -126,3 +129,7 @@ def main():
         print("No new CEESP entries")
 
     df.to_csv(HISTORY_FILE, index=False)
+
+
+if __name__ == "__main__":
+    main()
