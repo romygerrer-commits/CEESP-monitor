@@ -50,6 +50,8 @@ def detect_columns(df):
             col_map["indication"] = col
         elif "validation" in col:
             col_map["date"] = col
+        elif "lien" in col:
+            col_map["lien"] = col
 
     required = ["nom", "dci", "indication"]
 
@@ -90,7 +92,9 @@ def send_teams(rows, col_map):
 
     for i, (_, r) in enumerate(rows.iterrows(), 1):
         text += "\n\u200b\n"
-        text += f"1️⃣️**{normalize_text(r[col_map['nom']]).upper()}**\n\n"
+        nom = normalize_text(r[col_map['nom']]).upper()
+        url = normalize_text(r[col_map['lien']]) if "lien" in col_map else ""
+        text += f"1️⃣️**[{nom}]({url})**\n\n" if url else f"1️⃣️**{nom}**\n\n"
         text += f"• DCI : {normalize_text(r[col_map['dci']])}\n\n"
         text += f"• Indication : {normalize_text(r[col_map['indication']])}\n\n"
 
