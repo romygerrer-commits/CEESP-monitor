@@ -16,7 +16,7 @@ TABLEAU_URL = (
 
 CSV_BASE = (
     "https://public.tableau.com/views/"
-    "Contributionpatient/"
+    "Contributionpatient/Tableaudebord5/"
 )
 
 TEAMS_WEBHOOK = os.environ["TEAMS_WEBHOOK"]
