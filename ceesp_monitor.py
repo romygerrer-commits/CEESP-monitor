@@ -1,8 +1,10 @@
 import os
-import pandas as pd
+import re
+import json
 import requests
+import pandas as pd
 
-from tableauscraper import TableauScraper as TS
+from io import StringIO
 
 
 TABLEAU_URL = (
@@ -13,6 +15,15 @@ TABLEAU_URL = (
 TEAMS_WEBHOOK = os.environ["TEAMS_WEBHOOK"]
 
 HISTORY_FILE = "history.csv"
+
+
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/122.0.0.0 Safari/537.36"
+    )
+}
 
 
 def normalize_col(col):
@@ -52,115 +63,131 @@ def format_date_fr(value):
     return normalize_text(value)
 
 
-def load_data():
+def get_session_info():
 
-    print("Loading Tableau dashboard...")
+    print("Opening Tableau page...")
 
-    tableau_urls = [
+    r = requests.get(
+        TABLEAU_URL,
+        headers=HEADERS,
+        timeout=60
+    )
 
-        (
-            "https://public.tableau.com/views/"
-            "Contributionpatient/Tableaudebord5"
-            "?:showVizHome=no"
-        ),
+    r.raise_for_status()
 
-        (
-            "https://public.tableau.com/views/"
-            "Contributionpatient/Tableaudebord5"
-            "?:language=fr-FR&:display_count=n"
-            "&:origin=viz_share_link"
-        )
-    ]
+    text = r.text
 
-    ts = TS()
+    sessionid_match = re.search(
+        r'sessionid":"([^"]+)"',
+        text
+    )
 
-    loaded = False
+    sheet_match = re.search(
+        r'"sheetId":"([^"]+)"',
+        text
+    )
 
-    for url in tableau_urls:
+    if not sessionid_match:
 
-        try:
-
-            print(f"Trying URL: {url}")
-
-            ts.loads(url)
-
-            loaded = True
-
-            print("Tableau loaded successfully")
-
-            break
-
-        except Exception as e:
-
-            print(f"Failed loading Tableau: {e}")
-
-    if not loaded:
-
-        raise Exception(
-            "Unable to load Tableau dashboard"
+        bootstrap_match = re.search(
+            r'bootstrapSession/sessions/([A-Z0-9\-]+)',
+            text
         )
 
-    workbook = ts.getWorkbook()
+        if bootstrap_match:
 
-    worksheet_names = workbook.getWorksheetNames()
+            sessionid = bootstrap_match.group(1)
 
-    print("Available worksheets:")
-    print(worksheet_names)
+        else:
 
-    target_ws = None
-
-    for ws_name in worksheet_names:
-
-        try:
-
-            print(f"Trying worksheet: {ws_name}")
-
-            ws = workbook.getWorksheet(ws_name)
-
-            df = ws.data
-
-            if df.empty:
-
-                continue
-
-            cols = [
-                normalize_col(c)
-                for c in df.columns
-            ]
-
-            print(cols)
-
-            if any(
-                "nom commercial" in c
-                for c in cols
-            ):
-
-                target_ws = ws_name
-
-                print(
-                    f"Found CEESP worksheet: "
-                    f"{target_ws}"
-                )
-
-                break
-
-        except Exception as e:
-
-            print(
-                f"Worksheet error "
-                f"{ws_name}: {e}"
+            raise Exception(
+                "Could not find Tableau session ID"
             )
 
-    if target_ws is None:
+    else:
+
+        sessionid = sessionid_match.group(1)
+
+    if sheet_match:
+
+        sheet_id = sheet_match.group(1)
+
+    else:
+
+        sheet_id = "Tableaudebord5"
+
+    print(f"Session ID: {sessionid}")
+
+    return sessionid, sheet_id
+
+
+def load_data():
+
+    sessionid, sheet_id = get_session_info()
+
+    csv_url = (
+        f"https://public.tableau.com/vizql/"
+        f"wb/bootstrapSession/sessions/{sessionid}"
+    )
+
+    payload = {
+        "worksheetPortSize": '{"w":1365,"h":635}',
+        "dashboardPortSize": '{"w":1365,"h":635}',
+        "clientDimension": '{"w":1365,"h":635}',
+        "sheet_id": sheet_id,
+        "showParams": '{"checkpoint":false}',
+    }
+
+    print("Requesting Tableau bootstrap session...")
+
+    r = requests.post(
+        csv_url,
+        data=payload,
+        headers=HEADERS,
+        timeout=60
+    )
+
+    r.raise_for_status()
+
+    text = r.text
+
+    csv_match = re.search(
+        r'"presModelMap":"(.*?)"',
+        text,
+        re.DOTALL
+    )
+
+    if not csv_match:
 
         raise Exception(
-            "Could not find worksheet "
-            "containing CEESP data"
+            "Could not parse Tableau response"
         )
 
-    ws = workbook.getWorksheet(target_ws)
+    print("Downloading underlying CSV...")
 
-    df = ws.data
+    direct_csv = (
+        "https://public.tableau.com/views/"
+        "Contributionpatient/Tableaudebord5.csv"
+        "?:showVizHome=no"
+    )
+
+    csv_response = requests.get(
+        direct_csv,
+        headers=HEADERS,
+        timeout=60
+    )
+
+    csv_response.raise_for_status()
+
+    if "<html" in csv_response.text.lower():
+
+        raise Exception(
+            "Tableau returned HTML instead of CSV"
+        )
+
+    df = pd.read_csv(
+        StringIO(csv_response.text)
+    )
 
     df.columns = [
         normalize_col(c)
@@ -170,6 +197,7 @@ def load_data():
     print(f"{len(df)} rows loaded")
 
     return df
+
 
 def detect_columns(df):
 
@@ -217,15 +245,9 @@ def detect_columns(df):
 
         if req not in col_map:
 
-            print("Columns available:")
-            print(df.columns.tolist())
-
             raise Exception(
                 f"Missing required column: {req}"
             )
-
-    print("Detected columns:")
-    print(col_map)
 
     return col_map
 
@@ -271,29 +293,11 @@ def send_teams(rows, col_map):
 
     for _, row in rows.iterrows():
 
-        text += "\n\u200b\n"
-
         nom = normalize_text(
             row[col_map["nom"]]
         ).upper()
 
-        if (
-            "lien" in col_map
-            and pd.notna(row[col_map["lien"]])
-            and normalize_text(
-                row[col_map["lien"]]
-            ) != ""
-        ):
-
-            url = normalize_text(
-                row[col_map["lien"]]
-            )
-
-            text += f"💊 [{nom}]({url})\n\n"
-
-        else:
-
-            text += f"💊 {nom}\n\n"
+        text += f"💊 {nom}\n\n"
 
         text += (
             f"• DCI : "
@@ -307,20 +311,10 @@ def send_teams(rows, col_map):
 
         if "date" in col_map:
 
-            date_fr = format_date_fr(
-                row[col_map["date"]]
-            )
-
             text += (
                 f"• Date de validation : "
-                f"{date_fr}\n\n"
+                f"{format_date_fr(row[col_map['date']])}\n\n"
             )
-
-    text += (
-        "\n🔎 Tableau de bord complet :\n"
-        "https://public.tableau.com/views/"
-        "Contributionpatient/Tableaudebord5\n"
-    )
 
     payload = {
         "text": text
@@ -376,7 +370,7 @@ def main():
         ~df["key"].isin(old_keys)
     ]
 
-    if not new_rows.empty:
+    if not new_rows.empty():
 
         print(
             f"{len(new_rows)} "
