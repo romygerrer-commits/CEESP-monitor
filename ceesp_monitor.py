@@ -1,7 +1,7 @@
 import pandas as pd
 import requests
 import os
-from tableau_scraper import TableauScraper as TS
+from tableauscraper import TableauScraper as TS
 
 TABLEAU_URL = (
     "https://public.tableau.com/views/"
