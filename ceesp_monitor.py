@@ -1,10 +1,10 @@
 import os
 import time
+
 import pandas as pd
 import requests
 
 from selenium import webdriver
-from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 
 
@@ -18,194 +18,158 @@ TEAMS_WEBHOOK = os.environ["TEAMS_WEBHOOK"]
 HISTORY_FILE = "history.csv"
 
 
+MONTHS = [
+    "Jan", "Feb", "Mar", "Apr",
+    "May", "Jun", "Jul", "Aug",
+    "Sep", "Oct", "Nov", "Dec"
+]
+
+
+def normalize_col(col):
+
+    return str(col).strip().lower()
+
+
 def normalize_text(text):
 
-    if text is None:
+    if pd.isna(text):
+
         return ""
 
     return str(text).strip()
 
 
-def setup_driver():
+def format_date_fr(value):
 
-    options = Options()
+    if pd.isna(value):
 
-    options.add_argument("--headless=new")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--window-size=1920,12000")
+        return ""
 
-    driver = webdriver.Chrome(
-        options=options
-    )
+    try:
 
-    return driver
-
-
-def scroll_table(driver):
-
-    driver.execute_script(
-        """
-        const els = Array.from(
-            document.querySelectorAll("*")
-        );
-
-        let target = null;
-        let maxScroll = 0;
-
-        for (const el of els) {
-
-            if (
-                el.scrollHeight >
-                el.clientHeight
-            ) {
-
-                if (
-                    el.scrollHeight >
-                    maxScroll
-                ) {
-
-                    maxScroll =
-                        el.scrollHeight;
-
-                    target = el;
-                }
-            }
-        }
-
-        if (target) {
-
-            target.scrollTop += 800;
-        }
-        """
-    )
-
-
-def extract_all_cells(driver):
-
-    collected = []
-
-    seen = set()
-
-    stable = 0
-
-    previous_len = 0
-
-    for i in range(250):
-
-        time.sleep(2)
-
-        cells = driver.find_elements(
-            By.CSS_SELECTOR,
-            "div[role='gridcell']"
+        date_obj = pd.to_datetime(
+            value,
+            dayfirst=True,
+            errors="coerce"
         )
 
-        current_cells = []
+        if pd.notna(date_obj):
 
-        for cell in cells:
-
-            txt = normalize_text(
-                cell.text
+            return date_obj.strftime(
+                "%d/%m/%Y"
             )
 
-            if txt == "":
-                continue
+    except Exception:
 
-            current_cells.append(txt)
+        pass
 
-        # IMPORTANT:
-        # on ajoute dans l'ordre
-        # sans casser la structure
-        # mais on évite les doublons
-        # CONSÉCUTIFS
-
-        for txt in current_cells:
-
-            key = (
-                str(len(collected))
-                + "|"
-                + txt
-            )
-
-            if key in seen:
-                continue
-
-            seen.add(key)
-
-            collected.append(txt)
-
-        print(
-            f"Iteration {i} | "
-            f"{len(collected)} cells"
-        )
-
-        if len(collected) == previous_len:
-
-            stable += 1
-
-        else:
-
-            stable = 0
-
-        previous_len = len(collected)
-
-        if stable >= 10:
-
-            print(
-                "End reached"
-            )
-
-            break
-
-        scroll_table(driver)
-
-    return collected
+    return normalize_text(value)
 
 
-def rebuild_rows(cells):
+def is_date_line(text):
+
+    for m in MONTHS:
+
+        if text.startswith(m):
+
+            return True
+
+    return False
+
+
+def extract_visible_lines(driver):
+
+    body_text = driver.find_element(
+        "tag name",
+        "body"
+    ).text
+
+    raw_lines = [
+
+        line.strip()
+
+        for line in body_text.split("\n")
+
+        if line.strip()
+    ]
+
+    excluded = [
+
+        "nom co",
+        "dénomination",
+        "indication courte",
+        "validation",
+        "pathologie",
+        "view on tableau public",
+        "share"
+
+    ]
+
+    cleaned = []
+
+    for line in raw_lines:
+
+        lower = line.lower()
+
+        if any(
+            x in lower
+            for x in excluded
+        ):
+
+            continue
+
+        cleaned.append(line)
+
+    return cleaned
+
+
+def rebuild_rows(lines):
+
+    date_lines = [
+
+        x for x in lines
+        if is_date_line(x)
+    ]
+
+    n_rows = len(date_lines)
+
+    if n_rows == 0:
+
+        return []
+
+    col_nom = lines[0:n_rows]
+
+    col_dci = lines[
+        n_rows:n_rows * 2
+    ]
+
+    col_indication = lines[
+        n_rows * 2:n_rows * 3
+    ]
+
+    col_date = lines[
+        n_rows * 3:n_rows * 4
+    ]
 
     rows = []
 
-    total = len(cells)
-
-    # structure Tableau:
-    # noms
-    # dci
-    # indications
-    # dates
-
-    n = total // 4
-
-    noms = cells[0:n]
-
-    dcis = cells[n:n * 2]
-
-    indications = cells[
-        n * 2:n * 3
-    ]
-
-    dates = cells[
-        n * 3:n * 4
-    ]
-
-    for i in range(n):
+    for i in range(n_rows):
 
         try:
 
             rows.append({
 
                 "nom commercial":
-                    noms[i],
+                    col_nom[i],
 
                 "dci":
-                    dcis[i],
+                    col_dci[i],
 
                 "indication":
-                    indications[i],
+                    col_indication[i],
 
                 "date":
-                    dates[i],
+                    col_date[i],
 
                 "lien":
                     ""
@@ -218,90 +182,315 @@ def rebuild_rows(cells):
     return rows
 
 
+def scroll_tableau(driver):
+
+    return driver.execute_script(
+        """
+        const els = Array.from(
+            document.querySelectorAll('*')
+        );
+
+        let best = null;
+        let bestHeight = 0;
+
+        for (const el of els) {
+
+            const style =
+                window.getComputedStyle(el);
+
+            const overflowY =
+                style.overflowY;
+
+            const scrollable =
+                (
+                    overflowY === 'auto'
+                    || overflowY === 'scroll'
+                );
+
+            const height =
+                el.scrollHeight;
+
+            if (
+                scrollable &&
+                height > bestHeight &&
+                height > 3000
+            ) {
+
+                best = el;
+                bestHeight = height;
+            }
+        }
+
+        if (!best)
+            return -1;
+
+        const before =
+            best.scrollTop;
+
+        best.scrollTop += 500;
+
+        return {
+            before: before,
+            after: best.scrollTop,
+            max: best.scrollHeight
+        };
+        """
+    )
+
+
 def load_data():
 
     print("Launching Chrome...")
 
-    driver = setup_driver()
+    chrome_options = Options()
 
-    print(
-        "Opening Tableau dashboard..."
+    chrome_options.add_argument(
+        "--headless=new"
     )
+
+    chrome_options.add_argument(
+        "--no-sandbox"
+    )
+
+    chrome_options.add_argument(
+        "--disable-dev-shm-usage"
+    )
+
+    chrome_options.add_argument(
+        "--disable-gpu"
+    )
+
+    chrome_options.add_argument(
+        "--window-size=1920,8000"
+    )
+
+    driver = webdriver.Chrome(
+        options=chrome_options
+    )
+
+    print("Opening Tableau dashboard...")
 
     driver.get(TABLEAU_URL)
 
-    time.sleep(20)
+    time.sleep(25)
+
+    all_rows = []
+
+    seen = set()
+
+    stuck_count = 0
+
+    previous_scroll = -1
 
     print(
-        "Scrolling through Tableau..."
+        "Scrolling through full Tableau history..."
     )
 
-    cells = extract_all_cells(
-        driver
-    )
+    for i in range(500):
+
+        lines = extract_visible_lines(
+            driver
+        )
+
+        rows = rebuild_rows(lines)
+
+        for row in rows:
+
+            key = (
+                row["nom commercial"]
+                + "|"
+                + row["dci"]
+                + "|"
+                + row["indication"]
+            )
+
+            if key not in seen:
+
+                seen.add(key)
+
+                all_rows.append(row)
+
+        print(
+            f"Iteration {i} | "
+            f"{len(all_rows)} rows collected"
+        )
+
+        scroll_state = scroll_tableau(
+            driver
+        )
+
+        if scroll_state == -1:
+
+            print(
+                "No scroll container found"
+            )
+
+            break
+
+        current_scroll = scroll_state[
+            "after"
+        ]
+
+        print(
+            f"Scroll position: "
+            f"{current_scroll}"
+        )
+
+        if current_scroll == previous_scroll:
+
+            stuck_count += 1
+
+        else:
+
+            stuck_count = 0
+
+        previous_scroll = current_scroll
+
+        if stuck_count >= 15:
+
+            print(
+                "Reached end of Tableau table"
+            )
+
+            break
+
+        time.sleep(1.5)
 
     driver.quit()
 
-    print(
-        f"{len(cells)} cells extracted"
-    )
-
-    if len(cells) == 0:
+    if not all_rows:
 
         raise Exception(
-            "No Tableau cells extracted"
+            "No rows reconstructed"
         )
 
-    print("Rebuilding rows...")
+    # final deduplication
 
-    rows = rebuild_rows(cells)
+    unique_rows = []
 
-    df = pd.DataFrame(rows)
+    final_seen = set()
 
-    print(df.head(20))
+    for row in all_rows:
+
+        key = (
+            row["nom commercial"]
+            + "|"
+            + row["dci"]
+            + "|"
+            + row["indication"]
+        )
+
+        if key not in final_seen:
+
+            final_seen.add(key)
+
+            unique_rows.append(row)
+
+    df = pd.DataFrame(unique_rows)
+
+    df.columns = [
+        normalize_col(c)
+        for c in df.columns
+    ]
+
+    print(
+        f"{len(df)} final rows loaded"
+    )
+
+    print(df.tail(30))
 
     return df
 
 
-def make_key(row):
+def detect_columns(df):
+
+    return {
+
+        "nom":
+            "nom commercial",
+
+        "dci":
+            "dci",
+
+        "indication":
+            "indication",
+
+        "date":
+            "date",
+
+        "lien":
+            "lien"
+    }
+
+
+def make_key(row, col_map):
 
     return (
 
         normalize_text(
-            row["nom commercial"]
+            row[col_map["nom"]]
         )
 
         + "|"
 
         + normalize_text(
-            row["dci"]
+            row[col_map["dci"]]
         )
 
         + "|"
 
         + normalize_text(
-            row["indication"]
+            row[col_map["indication"]]
         )
     )
 
 
-def send_teams(rows):
+def send_teams(rows, col_map):
 
     if rows.empty:
+
         return
 
-    text = (
-        "🏛️ **Nouveaux avis CEESP détectés**\n\n"
-    )
+    count = len(rows)
+
+    if count > 1:
+
+        text = (
+            "🏛️ **Nouveaux avis CEESP détectés**\n\n"
+            f"{count} nouveaux avis publiés\n\n"
+        )
+
+    else:
+
+        text = (
+            "🏛️ **Nouvel avis CEESP détecté**\n\n"
+            "1 nouvel avis publié\n\n"
+        )
 
     for _, row in rows.iterrows():
 
+        nom = normalize_text(
+            row[col_map["nom"]]
+        ).upper()
+
+        text += f"💊 {nom}\n\n"
+
         text += (
-            f"💊 {row['nom commercial']}\n"
-            f"• DCI : {row['dci']}\n"
-            f"• Indication : {row['indication']}\n"
-            f"• Date : {row['date']}\n\n"
+            f"• DCI : "
+            f"{normalize_text(row[col_map['dci']])}\n\n"
         )
+
+        text += (
+            f"• Indication : "
+            f"{normalize_text(row[col_map['indication']])}\n\n"
+        )
+
+        text += (
+            f"• Date de validation : "
+            f"{format_date_fr(row[col_map['date']])}\n\n"
+        )
+
+        text += "\n"
 
     payload = {
         "text": text
@@ -314,67 +503,74 @@ def send_teams(rows):
     )
 
     print(
-        f"Teams notification: "
-        f"{response.status_code}"
+        f"Teams notification sent "
+        f"(status {response.status_code})"
     )
 
 
 def main():
 
-    print(
-        "Starting CEESP monitor"
-    )
+    print("Starting CEESP monitor")
 
     df = load_data()
 
+    col_map = detect_columns(df)
+
     df["key"] = df.apply(
-        make_key,
+        lambda r: make_key(
+            r,
+            col_map
+        ),
         axis=1
     )
 
-    old_keys = set()
+    if os.path.exists(HISTORY_FILE):
 
-    if os.path.exists(
-        HISTORY_FILE
-    ):
+        old = pd.read_csv(
+            HISTORY_FILE
+        )
 
-        try:
+        if "key" in old.columns:
 
-            old_df = pd.read_csv(
-                HISTORY_FILE
+            old_keys = set(
+                old["key"]
             )
 
-            if "key" in old_df.columns:
+        else:
 
-                old_keys = set(
-                    old_df["key"]
-                )
+            old_keys = set()
 
-        except Exception:
+    else:
 
-            pass
+        old_keys = set()
 
     new_rows = df[
         ~df["key"].isin(old_keys)
     ]
 
-    print(
-        f"{len(new_rows)} "
-        f"new rows detected"
-    )
-
     if not new_rows.empty:
 
-        send_teams(new_rows)
+        print(
+            f"{len(new_rows)} new rows detected"
+        )
+
+        send_teams(
+            new_rows,
+            col_map
+        )
+
+    else:
+
+        print(
+            "No new CEESP entries"
+        )
 
     df.to_csv(
         HISTORY_FILE,
         index=False
     )
 
-    print(
-        "History updated"
-    )
+    print("History updated")
 
 
 if __name__ == "__main__":
