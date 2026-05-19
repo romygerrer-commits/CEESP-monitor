@@ -62,51 +62,83 @@ def format_date_fr(value):
 
 def extract_rows(driver):
 
+    rows = []
+
+    # IMPORTANT :
+    # Tableau stocke les cellules
+    # ligne par ligne dans aria-colindex
+
     cells = driver.find_elements(
         By.CSS_SELECTOR,
         '[role="gridcell"]'
     )
 
-    values = []
+    current_row = {}
 
     for cell in cells:
 
-        text = cell.text.strip()
+        try:
 
-        if text:
+            text = cell.text.strip()
 
-            values.append(text)
+            if not text:
 
-    print(
-        f"{len(values)} cells found"
-    )
+                continue
 
-    rows = []
+            col_index = cell.get_attribute(
+                "aria-colindex"
+            )
 
-    # Tableau = 4 colonnes visibles
-    # nom / dci / indication / date
+            row_index = cell.get_attribute(
+                "aria-rowindex"
+            )
 
-    for i in range(
-        0,
-        len(values),
-        4
-    ):
+            if (
+                not col_index
+                or not row_index
+            ):
 
-        chunk = values[i:i + 4]
+                continue
 
-        if len(chunk) < 4:
+            col_index = int(col_index)
+
+            row_index = int(row_index)
+
+            if row_index not in current_row:
+
+                current_row[row_index] = {}
+
+            current_row[row_index][
+                col_index
+            ] = text
+
+        except Exception:
+
+            pass
+
+    for row_idx in sorted(current_row.keys()):
+
+        row = current_row[row_idx]
+
+        # colonnes :
+        # 1 = nom
+        # 2 = dci
+        # 3 = indication
+        # 4 = date
+
+        if 1 not in row:
 
             continue
 
-        nom = chunk[0]
+        nom = row.get(1, "")
 
-        dci = chunk[1]
+        dci = row.get(2, "")
 
-        indication = chunk[2]
+        indication = row.get(3, "")
 
-        date = chunk[3]
+        date = row.get(4, "")
 
-        # ignore headers
+        # ignore header
 
         if (
             "nom co"
@@ -115,11 +147,11 @@ def extract_rows(driver):
 
             continue
 
-        # ignore bruit
+        # ignore lignes vides
 
         if (
-            len(nom) < 2
-            or len(dci) < 2
+            not nom
+            or not dci
         ):
 
             continue
@@ -181,13 +213,13 @@ def load_data():
 
     time.sleep(20)
 
+    print("Scrolling Tableau table...")
+
     all_rows = []
 
     seen = set()
 
-    print("Scrolling table...")
-
-    for _ in range(25):
+    for _ in range(30):
 
         rows = extract_rows(driver)
 
@@ -205,15 +237,15 @@ def load_data():
 
                 all_rows.append(row)
 
-        driver.execute_script(
-            "window.scrollBy(0, 1200);"
-        )
-
-        time.sleep(1.5)
-
         print(
             f"{len(all_rows)} rows collected"
         )
+
+        driver.execute_script(
+            "window.scrollBy(0, 1500);"
+        )
+
+        time.sleep(1.5)
 
     driver.quit()
 
