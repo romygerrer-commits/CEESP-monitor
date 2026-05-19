@@ -2,6 +2,7 @@ import os
 import time
 import pandas as pd
 import requests
+from io import StringIO
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -79,15 +80,6 @@ def load_data():
         "--window-size=1920,1080"
     )
 
-    prefs = {
-        "download.prompt_for_download": False
-    }
-
-    chrome_options.add_experimental_option(
-        "prefs",
-        prefs
-    )
-
     driver = webdriver.Chrome(
         options=chrome_options
     )
@@ -98,86 +90,101 @@ def load_data():
 
     time.sleep(15)
 
-    tables = driver.find_elements(
-        By.TAG_NAME,
-        "table"
-    )
-
-    if not tables:
-
-        driver.quit()
-
-        raise Exception(
-            "No HTML tables found "
-            "on Tableau dashboard"
-        )
-
-    print(
-        f"{len(tables)} HTML tables found"
-    )
-
-    target_df = None
-
-    for i, table in enumerate(tables):
-
-        try:
-
-            html = table.get_attribute(
-                "outerHTML"
-            )
-
-            dfs = pd.read_html(html)
-
-            if not dfs:
-
-                continue
-
-            df = dfs[0]
-
-            df.columns = [
-                normalize_col(c)
-                for c in df.columns
-            ]
-
-            cols = df.columns.tolist()
-
-            print(f"Table {i} columns:")
-            print(cols)
-
-            if any(
-                "nom commercial" in c
-                for c in cols
-            ):
-
-                target_df = df
-
-                print(
-                    f"Using table {i}"
-                )
-
-                break
-
-        except Exception as e:
-
-            print(
-                f"Error parsing table "
-                f"{i}: {e}"
-            )
+    page_source = driver.page_source
 
     driver.quit()
 
-    if target_df is None:
+    import re
 
-        raise Exception(
-            "Could not find CEESP table"
-        )
-
-    print(
-        f"{len(target_df)} rows loaded"
+    session_match = re.search(
+        r'bootstrapSession\\/sessions\\/([A-Z0-9\\-:]+)',
+        page_source
     )
 
-    return target_df
+    if not session_match:
 
+        raise Exception(
+            "Could not find Tableau session"
+        )
+
+    session_id = session_match.group(1)
+
+    print(f"Session ID: {session_id}")
+
+    bootstrap_url = (
+        "https://public.tableau.com"
+        f"/vizql/w/Contributionpatient"
+        f"/v/Tableaudebord5/"
+        f"bootstrapSession/sessions/{session_id}"
+    )
+
+    payload = {
+        "sheet_id": "Tableaudebord5"
+    }
+
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0"
+        ),
+        "Accept": "*/*",
+        "Referer": TABLEAU_URL
+    }
+
+    print("Requesting bootstrap session...")
+
+    response = requests.post(
+        bootstrap_url,
+        data=payload,
+        headers=headers,
+        timeout=60
+    )
+
+    response.raise_for_status()
+
+    text = response.text
+
+    csv_match = re.search(
+        r'(?<=presModelMap\\":\\").*?(?=\\")',
+        text
+    )
+
+    if not csv_match:
+
+        print(text[:2000])
+
+        raise Exception(
+            "Could not parse Tableau bootstrap"
+        )
+
+    data_url = (
+        "https://public.tableau.com"
+        "/vizql/w/Contributionpatient"
+        "/v/Tableaudebord5/bootstrapSession/sessions/"
+        f"{session_id}/commands/tabdoc/getCsv"
+    )
+
+    print("Downloading CSV data...")
+
+    csv_response = requests.post(
+        data_url,
+        headers=headers,
+        timeout=60
+    )
+
+    csv_response.raise_for_status()
+
+    df = pd.read_csv(
+        StringIO(csv_response.text)
+    )
+
+    df.columns = [
+        normalize_col(c)
+        for c in df.columns
+    ]
+
+    print(f"{len(df)} rows loaded")
+
+    return df
 
 def detect_columns(df):
 
