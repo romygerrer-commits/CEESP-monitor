@@ -5,6 +5,8 @@ import json
 import pandas as pd
 import requests
 
+from io import StringIO
+
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
@@ -128,7 +130,7 @@ def load_data():
                 ):
 
                     match = re.search(
-                        r"sessions/([^/]+)",
+                        r"sessions/([^/?]+)",
                         url
                     )
 
@@ -157,11 +159,11 @@ def load_data():
             "Could not find Tableau session ID"
         )
 
-    data_url = (
+    bootstrap_url = (
         "https://public.tableau.com"
         "/vizql/w/Contributionpatient"
         "/v/Tableaudebord5"
-        f"/viewData/sessions/{session_id}"
+        f"/bootstrapSession/sessions/{session_id}"
     )
 
     headers = {
@@ -169,33 +171,70 @@ def load_data():
             "Mozilla/5.0"
         ),
         "Referer": TABLEAU_URL,
-        "Accept": "application/json"
+        "Accept": "*/*"
     }
 
-    print("Downloading Tableau data...")
+    payload = {
+        "worksheetPortSize": '{"w":1920,"h":1080}',
+        "dashboardPortSize": '{"w":1920,"h":1080}',
+        "clientDimension": '{"w":1920,"h":1080}',
+        "sheet_id": "Tableaudebord5",
+        "showParams": '{"checkpoint":false}'
+    }
 
-    response = requests.get(
-        data_url,
+    print("Requesting Tableau bootstrap...")
+
+    response = requests.post(
+        bootstrap_url,
         headers=headers,
+        data=payload,
         timeout=60
     )
 
     response.raise_for_status()
 
-    data = response.json()
+    text = response.text
 
-    print("JSON keys:")
-    print(data.keys())
+    csv_match = re.search(
+        r'csv\?sessionid=([^\"]+)',
+        text
+    )
 
-    if "data" not in data:
+    if not csv_match:
+
+        print(text[:3000])
 
         raise Exception(
-            "No data field returned "
-            "by Tableau"
+            "Could not find CSV endpoint"
         )
 
-    df = pd.DataFrame(
-        data["data"]
+    csv_session = csv_match.group(1)
+
+    csv_url = (
+        "https://public.tableau.com/"
+        f"vizql/w/Contributionpatient"
+        f"/v/Tableaudebord5/csv"
+        f"?sessionid={csv_session}"
+    )
+
+    print("Downloading CSV...")
+
+    csv_response = requests.get(
+        csv_url,
+        headers=headers,
+        timeout=60
+    )
+
+    csv_response.raise_for_status()
+
+    if "<html" in csv_response.text.lower():
+
+        raise Exception(
+            "Received HTML instead of CSV"
+        )
+
+    df = pd.read_csv(
+        StringIO(csv_response.text)
     )
 
     df.columns = [
@@ -261,9 +300,6 @@ def detect_columns(df):
                 f"{req}"
             )
 
-    print("Detected columns:")
-    print(col_map)
-
     return col_map
 
 
@@ -290,24 +326,10 @@ def send_teams(rows, col_map):
 
         return
 
-    count = len(rows)
-
-    if count > 1:
-
-        text = (
-            "🏛️ **Nouveaux avis "
-            "CEESP détectés**\n\n"
-            f"{count} nouveaux avis "
-            "publiés\n\n"
-        )
-
-    else:
-
-        text = (
-            "🏛️ **Nouvel avis "
-            "CEESP détecté**\n\n"
-            "1 nouvel avis publié\n\n"
-        )
+    text = (
+        "🏛️ **Nouveaux avis "
+        "CEESP détectés**\n\n"
+    )
 
     for _, row in rows.iterrows():
 
@@ -336,25 +358,14 @@ def send_teams(rows, col_map):
 
         text += "\n"
 
-    text += (
-        "🔎 Tableau de bord complet :\n"
-        "https://public.tableau.com/views/"
-        "Contributionpatient/Tableaudebord5\n"
-    )
-
     payload = {
         "text": text
     }
 
-    response = requests.post(
+    requests.post(
         TEAMS_WEBHOOK,
         json=payload,
         timeout=30
-    )
-
-    print(
-        f"Teams notification sent "
-        f"(status {response.status_code})"
     )
 
 
@@ -380,15 +391,9 @@ def main():
             HISTORY_FILE
         )
 
-        if "key" in old_df.columns:
-
-            old_keys = set(
-                old_df["key"]
-            )
-
-        else:
-
-            old_keys = set()
+        old_keys = set(
+            old_df["key"]
+        ) if "key" in old_df.columns else set()
 
     else:
 
@@ -402,7 +407,7 @@ def main():
 
         print(
             f"{len(new_rows)} "
-            f"new CEESP rows detected"
+            "new CEESP rows detected"
         )
 
         send_teams(
