@@ -118,33 +118,37 @@ def load_data():
         f"{len(lines)} text lines found"
     )
 
-    start_idx = None
+    # Détection début réel du tableau
+    # basé sur les premières valeurs visibles
+
+    start_idx = 0
 
     for idx, line in enumerate(lines):
 
         if (
-
-            "Nom co"
-            in line
-
-            or "nom commercial"
-            in line.lower()
-
+            "ITOBEVI" in line
+            or "VYJUVEK" in line
+            or "COLUMVI" in line
         ):
 
-            start_idx = idx + 1
+            start_idx = idx
 
             break
 
-    if start_idx is None:
-
-        raise Exception(
-            "Could not find table header"
-        )
-
     data_lines = lines[start_idx:]
 
+    print(
+        f"Starting parse at line "
+        f"{start_idx}"
+    )
+
     rows = []
+
+    # Colonnes fixes :
+    # 0 = nom commercial
+    # 1 = dci
+    # 2 = indication
+    # 3 = date validation
 
     chunk_size = 4
 
@@ -170,11 +174,13 @@ def load_data():
 
         date = chunk[3]
 
+        # filtre anti-bruit
+
         if (
 
-            len(nom) < 2
-
-            or len(dci) < 2
+            len(nom) < 3
+            or len(dci) < 3
+            or len(indication) < 3
 
         ):
 
@@ -215,7 +221,7 @@ def load_data():
         f"{len(df)} rows loaded"
     )
 
-    print(df.head())
+    print(df.head(10))
 
     return df
 
