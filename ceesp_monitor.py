@@ -26,25 +26,17 @@ def normalize_text(text):
     return str(text).strip()
 
 
-def format_date(value):
-
-    if pd.isna(value):
-        return ""
-
-    return normalize_text(value)
-
-
 def setup_driver():
 
-    chrome_options = Options()
+    options = Options()
 
-    chrome_options.add_argument("--headless=new")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--window-size=1920,12000")
+    options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--window-size=1920,12000")
 
-    driver = webdriver.Chrome(options=chrome_options)
+    driver = webdriver.Chrome(options=options)
 
     return driver
 
@@ -52,124 +44,112 @@ def setup_driver():
 def scroll_table(driver):
 
     driver.execute_script("""
-        const scrollables = Array.from(document.querySelectorAll('*'))
-            .filter(el => el.scrollHeight > el.clientHeight);
 
-        let biggest = null;
-        let maxHeight = 0;
+        const els = Array.from(document.querySelectorAll("*"));
 
-        for (const el of scrollables) {
+        let target = null;
+        let maxScroll = 0;
 
-            if (el.scrollHeight > maxHeight) {
+        for (const el of els) {
 
-                biggest = el;
-                maxHeight = el.scrollHeight;
+            if (el.scrollHeight > el.clientHeight) {
+
+                if (el.scrollHeight > maxScroll) {
+
+                    maxScroll = el.scrollHeight;
+                    target = el;
+                }
             }
         }
 
-        if (biggest) {
-            biggest.scrollTop += 800;
+        if (target) {
+
+            target.scrollTop += 800;
         }
+
     """)
 
 
-def extract_rows(driver):
+def extract_all_cells(driver):
 
-    rows_data = []
+    collected = []
 
     seen = set()
 
-    previous_count = 0
-    stable_iterations = 0
+    stable = 0
+    previous_len = 0
 
     for i in range(200):
 
         time.sleep(2)
 
-        rows = driver.find_elements(
+        cells = driver.find_elements(
             By.CSS_SELECTOR,
-            "div[role='row']"
+            "div[role='gridcell']"
         )
 
-        print(f"Iteration {i} | {len(rows)} HTML rows found")
+        for cell in cells:
 
-        for row in rows:
+            txt = normalize_text(cell.text)
 
-            try:
+            if txt == "":
+                continue
 
-                cells = row.find_elements(
-                    By.CSS_SELECTOR,
-                    "div[role='gridcell']"
-                )
+            if txt in seen:
+                continue
 
-                values = []
+            seen.add(txt)
 
-                for cell in cells:
+            collected.append(txt)
 
-                    txt = normalize_text(cell.text)
+        print(f"Iteration {i} | {len(collected)} cells")
 
-                    if txt != "":
-                        values.append(txt)
+        if len(collected) == previous_len:
 
-                # on veut exactement :
-                # nom / dci / indication / date
-
-                if len(values) < 4:
-                    continue
-
-                nom = values[0]
-                dci = values[1]
-                indication = values[2]
-                date = values[3]
-
-                key = (
-                    nom
-                    + "|"
-                    + dci
-                    + "|"
-                    + indication
-                )
-
-                if key in seen:
-                    continue
-
-                seen.add(key)
-
-                rows_data.append({
-
-                    "nom commercial": nom,
-                    "dci": dci,
-                    "indication": indication,
-                    "date": date,
-                    "lien": ""
-
-                })
-
-            except Exception:
-                pass
-
-        current_count = len(rows_data)
-
-        print(f"{current_count} rows collected")
-
-        if current_count == previous_count:
-
-            stable_iterations += 1
+            stable += 1
 
         else:
 
-            stable_iterations = 0
+            stable = 0
 
-        previous_count = current_count
+        previous_len = len(collected)
 
-        if stable_iterations >= 10:
+        if stable >= 10:
 
-            print("End of table reached")
+            print("End reached")
             break
 
         scroll_table(driver)
 
-    return rows_data
+    return collected
+
+
+def rebuild_rows(cells):
+
+    rows = []
+
+    i = 0
+
+    while i + 3 < len(cells):
+
+        nom = cells[i]
+        dci = cells[i + 1]
+        indication = cells[i + 2]
+        date = cells[i + 3]
+
+        rows.append({
+
+            "nom commercial": nom,
+            "dci": dci,
+            "indication": indication,
+            "date": date,
+            "lien": ""
+
+        })
+
+        i += 4
+
+    return rows
 
 
 def load_data():
@@ -184,17 +164,21 @@ def load_data():
 
     time.sleep(20)
 
-    print("Extracting rows from Tableau...")
+    print("Scrolling through Tableau...")
 
-    rows = extract_rows(driver)
+    cells = extract_all_cells(driver)
 
     driver.quit()
 
-    if len(rows) == 0:
+    print(f"{len(cells)} cells extracted")
 
-        raise Exception(
-            "No rows extracted from Tableau"
-        )
+    if len(cells) == 0:
+
+        raise Exception("No Tableau cells extracted")
+
+    print("Rebuilding rows...")
+
+    rows = rebuild_rows(cells)
 
     df = pd.DataFrame(rows)
 
@@ -206,13 +190,11 @@ def load_data():
 def make_key(row):
 
     return (
-
         normalize_text(row["nom commercial"])
         + "|"
         + normalize_text(row["dci"])
         + "|"
         + normalize_text(row["indication"])
-
     )
 
 
@@ -231,7 +213,7 @@ def send_teams(rows):
             f"💊 {row['nom commercial']}\n"
             f"• DCI : {row['dci']}\n"
             f"• Indication : {row['indication']}\n"
-            f"• Date : {format_date(row['date'])}\n\n"
+            f"• Date : {row['date']}\n\n"
         )
 
     payload = {
@@ -245,7 +227,7 @@ def send_teams(rows):
     )
 
     print(
-        f"Teams status: {response.status_code}"
+        f"Teams notification: {response.status_code}"
     )
 
 
@@ -280,9 +262,7 @@ def main():
         ~df["key"].isin(old_keys)
     ]
 
-    print(
-        f"{len(new_rows)} new rows detected"
-    )
+    print(f"{len(new_rows)} new rows detected")
 
     if not new_rows.empty:
 
