@@ -35,19 +35,44 @@ def format_date_fr(value):
 
 def load_data():
 
+    session = requests.Session()
+
     headers = {
-        "User-Agent": "Mozilla/5.0",
-        "Accept": "text/csv",
-        "Referer": "https://public.tableau.com/views/Contributionpatient/Tableaudebord5"
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        ),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Referer": "https://public.tableau.com/",
+        "Connection": "keep-alive"
     }
 
-    r = requests.get(CSV_URL, headers=headers, timeout=30)
+    # First request to establish cookies
+    session.get(
+        "https://public.tableau.com/",
+        headers=headers,
+        timeout=30
+    )
+
+    # Second request to fetch CSV
+    r = session.get(
+        CSV_URL,
+        headers=headers,
+        timeout=30
+    )
+
+    print("STATUS:", r.status_code)
+    print(r.text[:500])
+
     r.raise_for_status()
 
     if "<html" in r.text.lower():
         raise Exception("Tableau returned HTML instead of CSV")
 
     df = pd.read_csv(StringIO(r.text))
+
     df.columns = [normalize_col(c) for c in df.columns]
 
     return df
