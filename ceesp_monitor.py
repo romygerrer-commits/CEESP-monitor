@@ -1,12 +1,10 @@
 import os
 import time
-
 import pandas as pd
 import requests
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
 
 
 TABLEAU_URL = (
@@ -60,123 +58,6 @@ def format_date_fr(value):
     return normalize_text(value)
 
 
-def extract_rows(driver):
-
-    rows = []
-
-    # IMPORTANT :
-    # Tableau stocke les cellules
-    # ligne par ligne dans aria-colindex
-
-    cells = driver.find_elements(
-        By.CSS_SELECTOR,
-        '[role="gridcell"]'
-    )
-
-    current_row = {}
-
-    for cell in cells:
-
-        try:
-
-            text = cell.text.strip()
-
-            if not text:
-
-                continue
-
-            col_index = cell.get_attribute(
-                "aria-colindex"
-            )
-
-            row_index = cell.get_attribute(
-                "aria-rowindex"
-            )
-
-            if (
-                not col_index
-                or not row_index
-            ):
-
-                continue
-
-            col_index = int(col_index)
-
-            row_index = int(row_index)
-
-            if row_index not in current_row:
-
-                current_row[row_index] = {}
-
-            current_row[row_index][
-                col_index
-            ] = text
-
-        except Exception:
-
-            pass
-
-    for row_idx in sorted(current_row.keys()):
-
-        row = current_row[row_idx]
-
-        # colonnes :
-        # 1 = nom
-        # 2 = dci
-        # 3 = indication
-        # 4 = date
-
-        if 1 not in row:
-
-            continue
-
-        nom = row.get(1, "")
-
-        dci = row.get(2, "")
-
-        indication = row.get(3, "")
-
-        date = row.get(4, "")
-
-        # ignore header
-
-        if (
-            "nom co"
-            in nom.lower()
-        ):
-
-            continue
-
-        # ignore lignes vides
-
-        if (
-            not nom
-            or not dci
-        ):
-
-            continue
-
-        rows.append({
-
-            "nom commercial":
-                nom,
-
-            "dci":
-                dci,
-
-            "indication":
-                indication,
-
-            "date":
-                date,
-
-            "lien":
-                ""
-        })
-
-    return rows
-
-
 def load_data():
 
     print("Launching Chrome...")
@@ -200,7 +81,7 @@ def load_data():
     )
 
     chrome_options.add_argument(
-        "--window-size=1920,5000"
+        "--window-size=1920,3000"
     )
 
     driver = webdriver.Chrome(
@@ -213,49 +94,125 @@ def load_data():
 
     time.sleep(20)
 
-    print("Scrolling Tableau table...")
+    print("Extracting Tableau internal data...")
 
-    all_rows = []
+    data = driver.execute_script(
+        """
+        const results = [];
 
-    seen = set()
+        const allObjects = Object.values(window);
 
-    for _ in range(30):
+        for (const obj of allObjects) {
 
-        rows = extract_rows(driver)
+            try {
 
-        for row in rows:
+                if (
+                    obj &&
+                    obj._sheetImpl &&
+                    obj._sheetImpl._columns
+                ) {
 
-            key = (
-                row["nom commercial"]
-                + "|"
-                + row["dci"]
-            )
+                    const sheet =
+                        obj._sheetImpl;
 
-            if key not in seen:
+                    const columns =
+                        sheet._columns;
 
-                seen.add(key)
+                    const rows =
+                        sheet._data;
 
-                all_rows.append(row)
+                    results.push({
+                        columns: columns,
+                        rows: rows
+                    });
+                }
 
-        print(
-            f"{len(all_rows)} rows collected"
-        )
+            } catch(e) {}
+        }
 
-        driver.execute_script(
-            "window.scrollBy(0, 1500);"
-        )
-
-        time.sleep(1.5)
+        return results;
+        """
+    )
 
     driver.quit()
 
-    if not all_rows:
+    if not data:
 
         raise Exception(
-            "No CEESP rows extracted"
+            "No Tableau data found"
         )
 
-    df = pd.DataFrame(all_rows)
+    print(
+        f"{len(data)} Tableau objects found"
+    )
+
+    best_rows = []
+
+    for obj in data:
+
+        try:
+
+            columns = obj["columns"]
+
+            rows = obj["rows"]
+
+            if not rows:
+
+                continue
+
+            if len(rows) < len(best_rows):
+
+                continue
+
+            best_rows = rows
+
+        except Exception:
+
+            pass
+
+    if not best_rows:
+
+        raise Exception(
+            "No Tableau rows found"
+        )
+
+    structured_rows = []
+
+    for row in best_rows:
+
+        try:
+
+            structured_rows.append({
+
+                "nom commercial":
+                    row[0],
+
+                "dci":
+                    row[1],
+
+                "indication":
+                    row[2],
+
+                "date":
+                    row[3],
+
+                "lien":
+                    ""
+            })
+
+        except Exception:
+
+            pass
+
+    if not structured_rows:
+
+        raise Exception(
+            "No structured rows parsed"
+        )
+
+    df = pd.DataFrame(
+        structured_rows
+    )
 
     df.columns = [
         normalize_col(c)
@@ -273,47 +230,13 @@ def load_data():
 
 def detect_columns(df):
 
-    col_map = {}
-
-    for col in df.columns:
-
-        if "nom commercial" in col:
-
-            col_map["nom"] = col
-
-        elif (
-            "commune internationale" in col
-            or "dci" in col
-        ):
-
-            col_map["dci"] = col
-
-        elif "indication" in col:
-
-            col_map["indication"] = col
-
-        elif (
-            "validation" in col
-            or "date" in col
-        ):
-
-            col_map["date"] = col
-
-    required = [
-        "nom",
-        "dci",
-        "indication"
-    ]
-
-    for req in required:
-
-        if req not in col_map:
-
-            raise Exception(
-                f"Missing required column: {req}"
-            )
-
-    return col_map
+    return {
+        "nom": "nom commercial",
+        "dci": "dci",
+        "indication": "indication",
+        "date": "date",
+        "lien": "lien"
+    }
 
 
 def make_key(row, col_map):
@@ -373,34 +296,21 @@ def send_teams(rows, col_map):
             f"{normalize_text(row[col_map['indication']])}\n\n"
         )
 
-        if "date" in col_map:
-
-            text += (
-                f"• Date de validation : "
-                f"{format_date_fr(row[col_map['date']])}\n\n"
-            )
+        text += (
+            f"• Date de validation : "
+            f"{format_date_fr(row[col_map['date']])}\n\n"
+        )
 
         text += "\n"
-
-    text += (
-        "🔎 Tableau de bord complet :\n"
-        "https://public.tableau.com/views/"
-        "Contributionpatient/Tableaudebord5\n"
-    )
 
     payload = {
         "text": text
     }
 
-    response = requests.post(
+    requests.post(
         TEAMS_WEBHOOK,
         json=payload,
         timeout=30
-    )
-
-    print(
-        f"Teams notification sent "
-        f"(status {response.status_code})"
     )
 
 
@@ -422,7 +332,9 @@ def main():
 
     if os.path.exists(HISTORY_FILE):
 
-        old = pd.read_csv(HISTORY_FILE)
+        old = pd.read_csv(
+            HISTORY_FILE
+        )
 
         if "key" in old.columns:
 
