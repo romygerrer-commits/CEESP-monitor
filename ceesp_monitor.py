@@ -1,5 +1,4 @@
 import os
-import re
 import time
 
 import pandas as pd
@@ -118,91 +117,116 @@ def load_data():
         f"{len(lines)} text lines found"
     )
 
-    # Détection début réel du tableau
-    # basé sur les premières valeurs visibles
+    # suppression des headers
+    # et du bruit du dashboard
 
-    start_idx = 0
+    excluded = [
 
-    for idx, line in enumerate(lines):
+        "nom co",
+        "dénomination",
+        "indication",
+        "validation",
+        "contribution",
+        "patient",
+        "filtrer",
+        "pathologie"
 
-        if (
-            "ITOBEVI" in line
-            or "VYJUVEK" in line
-            or "COLUMVI" in line
+    ]
+
+    cleaned = []
+
+    for line in lines:
+
+        lower = line.lower()
+
+        if any(
+            x in lower
+            for x in excluded
         ):
 
-            start_idx = idx
+            continue
 
-            break
-
-    data_lines = lines[start_idx:]
+        cleaned.append(line)
 
     print(
-        f"Starting parse at line "
-        f"{start_idx}"
+        f"{len(cleaned)} cleaned lines"
     )
+
+    # Tableau extrait les colonnes
+    # verticalement :
+    #
+    # col1 entière
+    # col2 entière
+    # col3 entière
+    # col4 entière
+
+    n_rows = len(cleaned) // 4
+
+    print(
+        f"Estimated rows: {n_rows}"
+    )
+
+    col_nom = cleaned[0:n_rows]
+
+    col_dci = cleaned[
+        n_rows:n_rows * 2
+    ]
+
+    col_indication = cleaned[
+        n_rows * 2:n_rows * 3
+    ]
+
+    col_date = cleaned[
+        n_rows * 3:n_rows * 4
+    ]
 
     rows = []
 
-    # Colonnes fixes :
-    # 0 = nom commercial
-    # 1 = dci
-    # 2 = indication
-    # 3 = date validation
+    for i in range(n_rows):
 
-    chunk_size = 4
+        try:
 
-    for i in range(
-        0,
-        len(data_lines),
-        chunk_size
-    ):
+            nom = col_nom[i]
 
-        chunk = data_lines[
-            i:i + chunk_size
-        ]
+            dci = col_dci[i]
 
-        if len(chunk) < 4:
+            indication = col_indication[i]
 
-            continue
+            date = col_date[i]
 
-        nom = chunk[0]
+            if (
 
-        dci = chunk[1]
+                len(nom) < 2
 
-        indication = chunk[2]
+                or len(dci) < 2
 
-        date = chunk[3]
+                or len(indication) < 2
 
-        # filtre anti-bruit
+            ):
 
-        if (
+                continue
 
-            len(nom) < 3
-            or len(dci) < 3
-            or len(indication) < 3
+            rows.append({
 
-        ):
+                "nom commercial":
+                    nom,
 
-            continue
+                "dci":
+                    dci,
 
-        rows.append({
+                "indication":
+                    indication,
 
-            "nom commercial":
-                nom,
+                "date":
+                    date,
 
-            "dci":
-                dci,
+                "lien":
+                    ""
+            })
 
-            "indication":
-                indication,
+        except Exception:
 
-            "date":
-                date,
-
-            "lien":
-                ""
-        })
+            pass
 
     if not rows:
 
@@ -221,7 +245,7 @@ def load_data():
         f"{len(df)} rows loaded"
     )
 
-    print(df.head(10))
+    print(df.head(20))
 
     return df
 
