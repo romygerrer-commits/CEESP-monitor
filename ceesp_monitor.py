@@ -1,10 +1,12 @@
 import os
-import re
-import json
-import requests
+import time
 import pandas as pd
+import requests
 
 from io import StringIO
+
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 
 
 TABLEAU_URL = (
@@ -12,18 +14,15 @@ TABLEAU_URL = (
     "Contributionpatient/Tableaudebord5?:showVizHome=no"
 )
 
+CSV_URL = (
+    "https://public.tableau.com/views/"
+    "Contributionpatient/Tableaudebord5.csv"
+    "?:showVizHome=no"
+)
+
 TEAMS_WEBHOOK = os.environ["TEAMS_WEBHOOK"]
 
 HISTORY_FILE = "history.csv"
-
-
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/122.0.0.0 Safari/537.36"
-    )
-}
 
 
 def normalize_col(col):
@@ -63,130 +62,61 @@ def format_date_fr(value):
     return normalize_text(value)
 
 
-def get_session_info():
+def initialize_tableau():
 
-    print("Opening Tableau page...")
+    print("Initializing Tableau session...")
 
-    r = requests.get(
-        TABLEAU_URL,
-        headers=HEADERS,
-        timeout=60
+    chrome_options = Options()
+
+    chrome_options.add_argument("--headless=new")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+
+    driver = webdriver.Chrome(
+        options=chrome_options
     )
 
-    r.raise_for_status()
+    driver.get(TABLEAU_URL)
 
-    text = r.text
+    time.sleep(10)
 
-    sessionid_match = re.search(
-        r'sessionid":"([^"]+)"',
-        text
-    )
+    cookies = driver.get_cookies()
 
-    sheet_match = re.search(
-        r'"sheetId":"([^"]+)"',
-        text
-    )
+    driver.quit()
 
-    if not sessionid_match:
+    session = requests.Session()
 
-        bootstrap_match = re.search(
-            r'bootstrapSession/sessions/([A-Z0-9\-]+)',
-            text
+    for cookie in cookies:
+
+        session.cookies.set(
+            cookie["name"],
+            cookie["value"]
         )
 
-        if bootstrap_match:
-
-            sessionid = bootstrap_match.group(1)
-
-        else:
-
-            raise Exception(
-                "Could not find Tableau session ID"
-            )
-
-    else:
-
-        sessionid = sessionid_match.group(1)
-
-    if sheet_match:
-
-        sheet_id = sheet_match.group(1)
-
-    else:
-
-        sheet_id = "Tableaudebord5"
-
-    print(f"Session ID: {sessionid}")
-
-    return sessionid, sheet_id
+    return session
 
 
 def load_data():
 
-    sessionid, sheet_id = get_session_info()
+    session = initialize_tableau()
 
-    csv_url = (
-        f"https://public.tableau.com/vizql/"
-        f"wb/bootstrapSession/sessions/{sessionid}"
-    )
+    print("Downloading CSV...")
 
-    payload = {
-        "worksheetPortSize": '{"w":1365,"h":635}',
-        "dashboardPortSize": '{"w":1365,"h":635}',
-        "clientDimension": '{"w":1365,"h":635}',
-        "sheet_id": sheet_id,
-        "showParams": '{"checkpoint":false}',
-    }
-
-    print("Requesting Tableau bootstrap session...")
-
-    r = requests.post(
-        csv_url,
-        data=payload,
-        headers=HEADERS,
+    response = session.get(
+        CSV_URL,
         timeout=60
     )
 
-    r.raise_for_status()
+    response.raise_for_status()
 
-    text = r.text
-
-    csv_match = re.search(
-        r'"presModelMap":"(.*?)"',
-        text,
-        re.DOTALL
-    )
-
-    if not csv_match:
-
-        raise Exception(
-            "Could not parse Tableau response"
-        )
-
-    print("Downloading underlying CSV...")
-
-    direct_csv = (
-        "https://public.tableau.com/views/"
-        "Contributionpatient/Tableaudebord5.csv"
-        "?:showVizHome=no"
-    )
-
-    csv_response = requests.get(
-        direct_csv,
-        headers=HEADERS,
-        timeout=60
-    )
-
-    csv_response.raise_for_status()
-
-    if "<html" in csv_response.text.lower():
+    if "<html" in response.text.lower():
 
         raise Exception(
             "Tableau returned HTML instead of CSV"
         )
 
     df = pd.read_csv(
-        StringIO(csv_response.text)
+        StringIO(response.text)
     )
 
     df.columns = [
@@ -370,7 +300,7 @@ def main():
         ~df["key"].isin(old_keys)
     ]
 
-    if not new_rows.empty():
+    if not new_rows.empty:
 
         print(
             f"{len(new_rows)} "
