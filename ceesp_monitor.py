@@ -58,7 +58,32 @@ def load_data():
 
     ts = TS()
 
-    ts.loads(TABLEAU_URL)
+    ts.session.headers.update({
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/122.0.0.0 Safari/537.36"
+        )
+    })
+
+    try:
+
+        ts.loads(TABLEAU_URL)
+
+    except Exception as e:
+
+        print(f"Initial Tableau load failed: {e}")
+
+        print("Trying fallback URL...")
+
+        fallback_url = (
+            "https://public.tableau.com/views/"
+            "Contributionpatient/Tableaudebord5"
+            "?:language=fr-FR&:display_count=n"
+            "&:origin=viz_share_link"
+        )
+
+        ts.loads(fallback_url)
 
     workbook = ts.getWorkbook()
 
@@ -73,15 +98,11 @@ def load_data():
 
         try:
 
-            print(f"Trying worksheet: {ws_name}")
-
             ws = workbook.getWorksheet(ws_name)
 
             df = ws.data
 
             if df.empty:
-
-                print("Worksheet empty")
                 continue
 
             cols = [
@@ -89,7 +110,7 @@ def load_data():
                 for c in df.columns
             ]
 
-            print(f"Columns found in {ws_name}:")
+            print(f"Worksheet {ws_name}:")
             print(cols)
 
             if any(
@@ -98,12 +119,6 @@ def load_data():
             ):
 
                 target_ws = ws_name
-
-                print(
-                    f"Target worksheet found: "
-                    f"{target_ws}"
-                )
-
                 break
 
         except Exception as e:
@@ -120,6 +135,8 @@ def load_data():
             "containing CEESP data"
         )
 
+    print(f"Using worksheet: {target_ws}")
+
     ws = workbook.getWorksheet(target_ws)
 
     df = ws.data
@@ -132,7 +149,6 @@ def load_data():
     print(f"{len(df)} rows loaded")
 
     return df
-
 
 def detect_columns(df):
 
