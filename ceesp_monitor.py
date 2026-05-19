@@ -213,7 +213,7 @@ def load_data():
     )
 
     chrome_options.add_argument(
-        "--window-size=1920,5000"
+        "--window-size=1920,6000"
     )
 
     driver = webdriver.Chrome(
@@ -226,13 +226,15 @@ def load_data():
 
     time.sleep(20)
 
-    print("Scrolling Tableau table...")
-
     all_rows = []
 
     seen = set()
 
-    for i in range(100):
+    last_scroll = -1
+
+    print("Scrolling Tableau container...")
+
+    for _ in range(300):
 
         lines = extract_visible_lines(
             driver
@@ -260,9 +262,7 @@ def load_data():
             f"{len(all_rows)} rows collected"
         )
 
-        # scroll du vrai conteneur Tableau
-
-        driver.execute_script(
+        current_scroll = driver.execute_script(
             """
             const scrollables = Array.from(
                 document.querySelectorAll('*')
@@ -270,19 +270,33 @@ def load_data():
                 el.scrollHeight > el.clientHeight
             );
 
-            if (scrollables.length > 0) {
+            if (scrollables.length === 0)
+                return 0;
 
-                scrollables.sort(
-                    (a, b) =>
-                    b.scrollHeight - a.scrollHeight
-                );
+            scrollables.sort(
+                (a, b) =>
+                b.scrollHeight - a.scrollHeight
+            );
 
-                scrollables[0].scrollTop += 1500;
-            }
+            const target = scrollables[0];
+
+            const before = target.scrollTop;
+
+            target.scrollTop += 300;
+
+            return target.scrollTop;
             """
         )
 
-        time.sleep(2)
+        if current_scroll == last_scroll:
+
+            print("Reached end of table")
+
+            break
+
+        last_scroll = current_scroll
+
+        time.sleep(1)
 
     driver.quit()
 
@@ -292,7 +306,29 @@ def load_data():
             "No rows reconstructed"
         )
 
-    df = pd.DataFrame(all_rows)
+    # final deduplication
+
+    unique_rows = []
+
+    final_seen = set()
+
+    for row in all_rows:
+
+        key = (
+            row["nom commercial"]
+            + "|"
+            + row["dci"]
+            + "|"
+            + row["indication"]
+        )
+
+        if key not in final_seen:
+
+            final_seen.add(key)
+
+            unique_rows.append(row)
+
+    df = pd.DataFrame(unique_rows)
 
     df.columns = [
         normalize_col(c)
@@ -300,10 +336,10 @@ def load_data():
     ]
 
     print(
-        f"{len(df)} rows loaded"
+        f"{len(df)} final rows loaded"
     )
 
-    print(df.tail(20))
+    print(df.tail(30))
 
     return df
 
@@ -402,10 +438,15 @@ def send_teams(rows, col_map):
         "text": text
     }
 
-    requests.post(
+    response = requests.post(
         TEAMS_WEBHOOK,
         json=payload,
         timeout=30
+    )
+
+    print(
+        f"Teams notification sent "
+        f"(status {response.status_code})"
     )
 
 
