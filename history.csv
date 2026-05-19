@@ -1,40 +1,40 @@
 nom commercial,dci,indication,date,lien,key
-ITOBEVI,VYJUVEK,COLUMVI,OPDIVO/YER..,,ITOBEVI|VYJUVEK|COLUMVI
-TriClip™ G4,IMFINZI,KAFTRIO KA..,EVOLUT PRO..,,TriClip™ G4|IMFINZI|KAFTRIO KA..
-RYBREVANT ..,BLINCYTO,CARVYKTI,WEGOVY,,RYBREVANT ..|BLINCYTO|CARVYKTI
-GARDASIL9,JEMPERLI,ELAHERE,COMIRNATY,,GARDASIL9|JEMPERLI|ELAHERE
-EFLUELDA,RYBREVANT,PADCEV,WINREVAIR,,EFLUELDA|RYBREVANT|PADCEV
-BRIUMVI,LIBMELDY,DUPIXENT,JEMPERLI,,BRIUMVI|LIBMELDY|DUPIXENT
-CASGEVY,FABHALTA,LONSURF,Système Mi..,,CASGEVY|FABHALTA|LONSURF
-SKYCLARYS,ABRYSVO,CASGEVY,LIFEVEST 40..,,SKYCLARYS|ABRYSVO|CASGEVY
-SHINGRIX,TRODELVY,NUVAXOVID,OMNIPOD 5,,SHINGRIX|TRODELVY|NUVAXOVID
-inavolisib,bérémagène géper..,glofitamab,(nivolumab/iplimu..,,inavolisib|bérémagène géper..|glofitamab
-amivantamab en a..,blinatumomab,ciltacabtagene aut..,sémaglutide,,amivantamab en a..|blinatumomab|ciltacabtagene aut..
-vaccin papillomavi..,dostarlimab,mirvetuximab sor..,vaccin à ARNm,,vaccin papillomavi..|dostarlimab|mirvetuximab sor..
-Vaccin grippal triv..,amivantamab,enfortumab vedotin,sotatercept,,Vaccin grippal triv..|amivantamab|enfortumab vedotin
-ublituximab,atidarsagène auto..,dupilumab,Dostarlimab,,ublituximab|atidarsagène auto..|dupilumab
-exagamglogene au..,iptacopan,tipiracil/trifluridine,DM,,exagamglogene au..|iptacopan|tipiracil/trifluridine
-omaveloxolone,VACCIN RSVpreF 1..,agamglogene auto..,DM,,omaveloxolone|VACCIN RSVpreF 1..|agamglogene auto..
-Vaccin zona (reco..,sacituzumab govit..,protéine Spike de ..,DM,,Vaccin zona (reco..|sacituzumab govit..|protéine Spike de ..
-Cancer du sein localement avancé ou méta..,Epidermolyse bulleuse dystrophique,Lymphome diffus à grandes cellules B,Cancer colorectal,,Cancer du sein localement avancé ou méta..|Epidermolyse bulleuse dystrophique|Lymphome diffus à grandes cellules B
-Cardiologie interventionnelle,Cancer bronchique à petites cellules de sta..,Mucoviscidose,Sténose aortique sévère symptomatique,,Cardiologie interventionnelle|Cancer bronchique à petites cellules de sta..|Mucoviscidose
-Cancer bronchique non à petites cellules (e..,Leucémie aiguë lymphoblastique (LAL) à pr..,Myélome multiple,Obésité,,Cancer bronchique non à petites cellules (e..|Leucémie aiguë lymphoblastique (LAL) à pr..|Myélome multiple
-Papillomavirus Humains (HPV),Cancer de l’endomètre (CE),Cancer de l'ovaire,COVID-19,,Papillomavirus Humains (HPV)|Cancer de l’endomètre (CE)|Cancer de l'ovaire
-Grippe,Cancer bronchique non à petites cellules (e..,carcinome urothélial,Hypertension artérielle pulmonaire (HTAP),,Grippe|Cancer bronchique non à petites cellules (e..|carcinome urothélial
-Sclérose en plaques récurrente (SEP-R),Leucodystrophie métachromatique chez l’e..,Bronchopneumopathie chronique obstructi..,Cancer de l’endomètre (CE),,Sclérose en plaques récurrente (SEP-R)|Leucodystrophie métachromatique chez l’e..|Bronchopneumopathie chronique obstructi..
-β-thalassémie dépendante des transfusion..,Hémoglobinurie paroxystique nocturne (H..,Cancer colorectal métastatique (CCRm),Diabète de type 1,,β-thalassémie dépendante des transfusion..|Hémoglobinurie paroxystique nocturne (H..|Cancer colorectal métastatique (CCRm)
-Ataxie de Friedreich (AF),Maladie des voies respiratoires inférieures..,Drépanocytose sévère,Pathologies cardiaques entrainant une FE..,,Ataxie de Friedreich (AF)|Maladie des voies respiratoires inférieures..|Drépanocytose sévère
-Zona et névralgies post-zostériennes (NPZ),Cancer du sein (RH+/HER2-) non résécable ..,COVID-19,Diabète de type 1,,Zona et névralgies post-zostériennes (NPZ)|Cancer du sein (RH+/HER2-) non résécable ..|COVID-19
-Feb 2026,Feb 2026,Jan 2026,Jan 2026,,Feb 2026|Feb 2026|Jan 2026
-Dec 2025,Nov 2025,Nov 2025,Nov 2025,,Dec 2025|Nov 2025|Nov 2025
-Nov 2025,Oct 2025,Sep 2025,Jul 2025,,Nov 2025|Oct 2025|Sep 2025
-Jul 2025,Jul 2025,Jun 2025,May 2025,,Jul 2025|Jul 2025|Jun 2025
-Apr 2025,Apr 2025,Mar 2025,Mar 2025,,Apr 2025|Apr 2025|Mar 2025
-Feb 2025,Feb 2025,Jan 2025,Jan 2025,,Feb 2025|Feb 2025|Jan 2025
-Dec 2024,Dec 2024,Oct 2024,Oct 2024,,Dec 2024|Dec 2024|Oct 2024
-Sep 2024,Jul 2024,Jul 2024,Jun 2024,,Sep 2024|Jul 2024|Jul 2024
-May 2024,Apr 2024,Apr 2024,Mar 2024,,May 2024|Apr 2024|Apr 2024
-Filter,Filtrer par motif d'évaluation,Inclusive,(All),,Filter|Filtrer par motif d'évaluation|Inclusive
-Filter,"Rechercher par nom, DCI ou indication",Inclusive,"After typing a new value, press ENTER to commit or Escape to revert.",,"Filter|Rechercher par nom, DCI ou indication|Inclusive"
-View on Tableau Public,Undo,Redo,Revert,,View on Tableau Public|Undo|Redo
-Replay Animation,Replay Speed Options,Download,Full Screen,,Replay Animation|Replay Speed Options|Download
+ITOBEVI,(nivolumab/iplimu..,Mucoviscidose,Sep 2025,,ITOBEVI|(nivolumab/iplimu..|Mucoviscidose
+VYJUVEK,DM,Sténose aortique sévère symptomatique,Jul 2025,,VYJUVEK|DM|Sténose aortique sévère symptomatique
+COLUMVI,durvalumab,Cancer bronchique non à petites cellules (e..,Jul 2025,,COLUMVI|durvalumab|Cancer bronchique non à petites cellules (e..
+OPDIVO/YER..,ivacaftor/tezacaft..,Leucémie aiguë lymphoblastique (LAL) à pr..,Jul 2025,,OPDIVO/YER..|ivacaftor/tezacaft..|Leucémie aiguë lymphoblastique (LAL) à pr..
+TriClip™ G4,DM,Myélome multiple,Jun 2025,,TriClip™ G4|DM|Myélome multiple
+IMFINZI,amivantamab en a..,Obésité,May 2025,,IMFINZI|amivantamab en a..|Obésité
+KAFTRIO KA..,blinatumomab,Papillomavirus Humains (HPV),Apr 2025,,KAFTRIO KA..|blinatumomab|Papillomavirus Humains (HPV)
+EVOLUT PRO..,ciltacabtagene aut..,Cancer de l’endomètre (CE),Apr 2025,,EVOLUT PRO..|ciltacabtagene aut..|Cancer de l’endomètre (CE)
+RYBREVANT ..,sémaglutide,Cancer de l'ovaire,Mar 2025,,RYBREVANT ..|sémaglutide|Cancer de l'ovaire
+BLINCYTO,vaccin papillomavi..,COVID-19,Mar 2025,,BLINCYTO|vaccin papillomavi..|COVID-19
+CARVYKTI,dostarlimab,Grippe,Feb 2025,,CARVYKTI|dostarlimab|Grippe
+WEGOVY,mirvetuximab sor..,Cancer bronchique non à petites cellules (e..,Feb 2025,,WEGOVY|mirvetuximab sor..|Cancer bronchique non à petites cellules (e..
+GARDASIL9,vaccin à ARNm,carcinome urothélial,Jan 2025,,GARDASIL9|vaccin à ARNm|carcinome urothélial
+JEMPERLI,Vaccin grippal triv..,Hypertension artérielle pulmonaire (HTAP),Jan 2025,,JEMPERLI|Vaccin grippal triv..|Hypertension artérielle pulmonaire (HTAP)
+ELAHERE,amivantamab,Sclérose en plaques récurrente (SEP-R),Dec 2024,,ELAHERE|amivantamab|Sclérose en plaques récurrente (SEP-R)
+COMIRNATY,enfortumab vedotin,Leucodystrophie métachromatique chez l’e..,Dec 2024,,COMIRNATY|enfortumab vedotin|Leucodystrophie métachromatique chez l’e..
+EFLUELDA,sotatercept,Bronchopneumopathie chronique obstructi..,Oct 2024,,EFLUELDA|sotatercept|Bronchopneumopathie chronique obstructi..
+RYBREVANT,ublituximab,Cancer de l’endomètre (CE),Oct 2024,,RYBREVANT|ublituximab|Cancer de l’endomètre (CE)
+PADCEV,atidarsagène auto..,β-thalassémie dépendante des transfusion..,Sep 2024,,PADCEV|atidarsagène auto..|β-thalassémie dépendante des transfusion..
+WINREVAIR,dupilumab,Hémoglobinurie paroxystique nocturne (H..,Jul 2024,,WINREVAIR|dupilumab|Hémoglobinurie paroxystique nocturne (H..
+BRIUMVI,Dostarlimab,Cancer colorectal métastatique (CCRm),Jul 2024,,BRIUMVI|Dostarlimab|Cancer colorectal métastatique (CCRm)
+LIBMELDY,exagamglogene au..,Diabète de type 1,Jun 2024,,LIBMELDY|exagamglogene au..|Diabète de type 1
+DUPIXENT,iptacopan,Ataxie de Friedreich (AF),May 2024,,DUPIXENT|iptacopan|Ataxie de Friedreich (AF)
+JEMPERLI,tipiracil/trifluridine,Maladie des voies respiratoires inférieures..,Apr 2024,,JEMPERLI|tipiracil/trifluridine|Maladie des voies respiratoires inférieures..
+CASGEVY,DM,Drépanocytose sévère,Apr 2024,,CASGEVY|DM|Drépanocytose sévère
+FABHALTA,omaveloxolone,Zona et névralgies post-zostériennes (NPZ),Mar 2024,,FABHALTA|omaveloxolone|Zona et névralgies post-zostériennes (NPZ)
+LONSURF,VACCIN RSVpreF 1..,Cancer du sein (RH+/HER2-) non résécable ..,Filter,,LONSURF|VACCIN RSVpreF 1..|Cancer du sein (RH+/HER2-) non résécable ..
+Système Mi..,agamglogene auto..,COVID-19,Inclusive,,Système Mi..|agamglogene auto..|COVID-19
+SKYCLARYS,DM,Diabète de type 1,(All),,SKYCLARYS|DM|Diabète de type 1
+ABRYSVO,Vaccin zona (reco..,Feb 2026,Filter,,ABRYSVO|Vaccin zona (reco..|Feb 2026
+CASGEVY,sacituzumab govit..,Feb 2026,Inclusive,,CASGEVY|sacituzumab govit..|Feb 2026
+LIFEVEST 40..,protéine Spike de ..,Jan 2026,"After typing a new value, press ENTER to commit or Escape to revert.",,LIFEVEST 40..|protéine Spike de ..|Jan 2026
+SHINGRIX,DM,Jan 2026,View on Tableau Public,,SHINGRIX|DM|Jan 2026
+TRODELVY,Cancer du sein localement avancé ou méta..,Dec 2025,Undo,,TRODELVY|Cancer du sein localement avancé ou méta..|Dec 2025
+NUVAXOVID,Epidermolyse bulleuse dystrophique,Nov 2025,Redo,,NUVAXOVID|Epidermolyse bulleuse dystrophique|Nov 2025
+OMNIPOD 5,Lymphome diffus à grandes cellules B,Nov 2025,Revert,,OMNIPOD 5|Lymphome diffus à grandes cellules B|Nov 2025
+inavolisib,Cancer colorectal,Nov 2025,Replay Animation,,inavolisib|Cancer colorectal|Nov 2025
+bérémagène géper..,Cardiologie interventionnelle,Nov 2025,Replay Speed Options,,bérémagène géper..|Cardiologie interventionnelle|Nov 2025
+glofitamab,Cancer bronchique à petites cellules de sta..,Oct 2025,Download,,glofitamab|Cancer bronchique à petites cellules de sta..|Oct 2025
