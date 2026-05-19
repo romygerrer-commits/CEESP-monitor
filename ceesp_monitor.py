@@ -1,11 +1,12 @@
 import os
+import re
 import time
 import pandas as pd
 import requests
+
 from io import StringIO
 
 from selenium import webdriver
-from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 
 
@@ -92,86 +93,84 @@ def load_data():
 
     page_source = driver.page_source
 
-    driver.quit()
-
-    import re
-
     session_match = re.search(
-        r'bootstrapSession\\/sessions\\/([A-Z0-9\\-:]+)',
+        r'bootstrapSession\\/sessions\\/([^"]+)',
         page_source
     )
 
     if not session_match:
 
+        driver.quit()
+
         raise Exception(
-            "Could not find Tableau session"
+            "Could not find Tableau session ID"
         )
 
     session_id = session_match.group(1)
 
     print(f"Session ID: {session_id}")
 
+    driver.quit()
+
     bootstrap_url = (
         "https://public.tableau.com"
-        f"/vizql/w/Contributionpatient"
-        f"/v/Tableaudebord5/"
+        "/vizql/w/Contributionpatient"
+        "/v/Tableaudebord5/"
         f"bootstrapSession/sessions/{session_id}"
     )
-
-    payload = {
-        "sheet_id": "Tableaudebord5"
-    }
 
     headers = {
         "User-Agent": (
             "Mozilla/5.0"
         ),
-        "Accept": "*/*",
-        "Referer": TABLEAU_URL
+        "Referer": TABLEAU_URL,
+        "Accept": "*/*"
     }
 
-    print("Requesting bootstrap session...")
+    payload = {
+        "sheet_id": "Tableaudebord5"
+    }
+
+    print("Requesting Tableau bootstrap session...")
 
     response = requests.post(
         bootstrap_url,
-        data=payload,
         headers=headers,
+        data=payload,
         timeout=60
     )
 
     response.raise_for_status()
 
-    text = response.text
-
-    csv_match = re.search(
-        r'(?<=presModelMap\\":\\").*?(?=\\")',
-        text
-    )
-
-    if not csv_match:
-
-        print(text[:2000])
-
-        raise Exception(
-            "Could not parse Tableau bootstrap"
-        )
-
-    data_url = (
+    csv_url = (
         "https://public.tableau.com"
         "/vizql/w/Contributionpatient"
-        "/v/Tableaudebord5/bootstrapSession/sessions/"
-        f"{session_id}/commands/tabdoc/getCsv"
+        "/v/Tableaudebord5/"
+        f"bootstrapSession/sessions/{session_id}"
+        "/commands/tabdoc/getCsv"
     )
 
     print("Downloading CSV data...")
 
     csv_response = requests.post(
-        data_url,
+        csv_url,
         headers=headers,
         timeout=60
     )
 
     csv_response.raise_for_status()
+
+    if len(csv_response.text) < 100:
+
+        raise Exception(
+            "CSV response too short"
+        )
+
+    if "<html" in csv_response.text.lower():
+
+        raise Exception(
+            "Received HTML instead of CSV"
+        )
 
     df = pd.read_csv(
         StringIO(csv_response.text)
@@ -185,6 +184,7 @@ def load_data():
     print(f"{len(df)} rows loaded")
 
     return df
+
 
 def detect_columns(df):
 
@@ -232,10 +232,15 @@ def detect_columns(df):
 
         if req not in col_map:
 
+            print(df.columns.tolist())
+
             raise Exception(
                 f"Missing required column: "
                 f"{req}"
             )
+
+    print("Detected columns:")
+    print(col_map)
 
     return col_map
 
@@ -308,6 +313,12 @@ def send_teams(rows, col_map):
             )
 
         text += "\n"
+
+    text += (
+        "🔎 Tableau de bord complet :\n"
+        "https://public.tableau.com/views/"
+        "Contributionpatient/Tableaudebord5\n"
+    )
 
     payload = {
         "text": text
