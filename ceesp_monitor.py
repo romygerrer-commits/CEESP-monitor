@@ -3,8 +3,6 @@ import requests
 import os
 from io import StringIO
 
-CSV_URL = "https://public.tableau.com/views/Contributionpatient/Tableaudebord5.csv?:showVizHome=no"
-
 TEAMS_WEBHOOK = os.environ["TEAMS_WEBHOOK"]
 HISTORY_FILE = "history.csv"
 
@@ -33,6 +31,9 @@ def format_date_fr(value):
     return normalize_text(value)
 
 
+import re
+
+
 def load_data():
 
     session = requests.Session()
@@ -42,36 +43,73 @@ def load_data():
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/124.0.0.0 Safari/537.36"
-        ),
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
-        "Referer": "https://public.tableau.com/",
-        "Connection": "keep-alive"
+        )
     }
 
-    # First request to establish cookies
-    session.get(
-        "https://public.tableau.com/",
-        headers=headers,
-        timeout=30
+    tableau_url = (
+        "https://public.tableau.com/views/"
+        "Contributionpatient/Tableaudebord5?:showVizHome=no"
     )
 
-    # Second request to fetch CSV
-    r = session.get(
-        CSV_URL,
-        headers=headers,
-        timeout=30
-    )
-
-    print("STATUS:", r.status_code)
-    print(r.text[:500])
-
+    # STEP 1 — Load Tableau page
+    r = session.get(tableau_url, headers=headers, timeout=30)
     r.raise_for_status()
 
-    if "<html" in r.text.lower():
-        raise Exception("Tableau returned HTML instead of CSV")
+    # STEP 2 — Extract session ID
+    match = re.search(
+        r'bootstrapSession/sessions/([A-Z0-9\-]+)',
+        r.text
+    )
 
-    df = pd.read_csv(StringIO(r.text))
+    if not match:
+        raise Exception("Could not find Tableau session ID")
+
+    session_id = match.group(1)
+
+    print("SESSION ID:", session_id)
+
+    # STEP 3 — Call bootstrap endpoint
+    bootstrap_url = (
+        "https://public.tableau.com/vizql/w/"
+        "Contributionpatient/v/Tableaudebord5/"
+        f"bootstrapSession/sessions/{session_id}"
+    )
+
+    payload = {
+        "sheet_id": "Tableaudebord5"
+    }
+
+    r2 = session.post(
+        bootstrap_url,
+        data=payload,
+        headers=headers,
+        timeout=30
+    )
+
+    r2.raise_for_status()
+
+    # STEP 4 — Extract CSV export URL
+    csv_match = re.search(
+        r'(/vizql/w/Contributionpatient/v/Tableaudebord5/viewData/sessions/.*?/views/.*?)"',
+        r2.text
+    )
+
+    if not csv_match:
+        print(r2.text[:5000])
+        raise Exception("Could not find CSV endpoint")
+
+    csv_path = csv_match.group(1)
+
+    csv_url = "https://public.tableau.com" + csv_path
+
+    print("CSV URL:", csv_url)
+
+    # STEP 5 — Download CSV data
+    r3 = session.get(csv_url, headers=headers, timeout=30)
+
+    r3.raise_for_status()
+
+    df = pd.read_csv(StringIO(r3.text))
 
     df.columns = [normalize_col(c) for c in df.columns]
 
