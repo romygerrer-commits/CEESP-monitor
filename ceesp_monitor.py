@@ -1,10 +1,10 @@
 import os
+import re
 import json
 import time
+
 import pandas as pd
 import requests
-
-from io import StringIO
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -61,7 +61,220 @@ def format_date_fr(value):
     return normalize_text(value)
 
 
+def load_data():
 
+    print("Launching Chrome...")
+
+    chrome_options = Options()
+
+    chrome_options.add_argument(
+        "--headless=new"
+    )
+
+    chrome_options.add_argument(
+        "--no-sandbox"
+    )
+
+    chrome_options.add_argument(
+        "--disable-dev-shm-usage"
+    )
+
+    chrome_options.add_argument(
+        "--disable-gpu"
+    )
+
+    chrome_options.add_argument(
+        "--window-size=1920,1080"
+    )
+
+    driver = webdriver.Chrome(
+        options=chrome_options
+    )
+
+    print("Opening Tableau dashboard...")
+
+    driver.get(TABLEAU_URL)
+
+    time.sleep(25)
+
+    print("Extracting Tableau data...")
+
+    tableau_data = driver.execute_script(
+        """
+        function findVizObject() {
+
+            for (const key in window) {
+
+                try {
+
+                    const value = window[key];
+
+                    if (
+                        value &&
+                        typeof value === 'object'
+                    ) {
+
+                        if (
+                            value._workbookImpl
+                        ) {
+
+                            return value;
+                        }
+                    }
+
+                } catch(e) {}
+            }
+
+            return null;
+        }
+
+        const viz = findVizObject();
+
+        if (!viz) {
+
+            return null;
+        }
+
+        const workbook =
+            viz._workbookImpl;
+
+        const sheets =
+            workbook._sheets;
+
+        let output = [];
+
+        for (const sheet of sheets) {
+
+            try {
+
+                const name =
+                    sheet._name;
+
+                const data =
+                    sheet._dataSegments;
+
+                if (!data) {
+                    continue;
+                }
+
+                output.push({
+                    name: name,
+                    data: JSON.stringify(data)
+                });
+
+            } catch(e) {}
+        }
+
+        return output;
+        """
+    )
+
+    driver.quit()
+
+    if not tableau_data:
+
+        raise Exception(
+            "Could not extract Tableau data"
+        )
+
+    print(
+        f"{len(tableau_data)} "
+        "worksheets found"
+    )
+
+    extracted_rows = []
+
+    for sheet in tableau_data:
+
+        try:
+
+            raw = json.loads(
+                sheet["data"]
+            )
+
+            raw_text = json.dumps(raw)
+
+            if (
+                "Nom commercial"
+                not in raw_text
+            ):
+
+                continue
+
+            print(
+                f"Using worksheet: "
+                f"{sheet['name']}"
+            )
+
+            values = re.findall(
+                r'"value":"([^"]*)"',
+                raw_text
+            )
+
+            if len(values) < 20:
+
+                continue
+
+            for i in range(
+                0,
+                len(values),
+                5
+            ):
+
+                chunk = values[i:i + 5]
+
+                if len(chunk) < 3:
+                    continue
+
+                extracted_rows.append({
+
+                    "nom commercial":
+                        chunk[0],
+
+                    "dci":
+                        chunk[1],
+
+                    "indication":
+                        chunk[2],
+
+                    "date":
+                        chunk[3]
+                        if len(chunk) > 3
+                        else "",
+
+                    "lien":
+                        chunk[4]
+                        if len(chunk) > 4
+                        else ""
+                })
+
+        except Exception as e:
+
+            print(
+                f"Error parsing worksheet "
+                f"{sheet['name']}: {e}"
+            )
+
+    if not extracted_rows:
+
+        raise Exception(
+            "Could not parse CEESP data"
+        )
+
+    df = pd.DataFrame(
+        extracted_rows
+    )
+
+    df.columns = [
+        normalize_col(c)
+        for c in df.columns
+    ]
+
+    print(
+        f"{len(df)} rows loaded"
+    )
+
+    return df
 
 
 def detect_columns(df):
