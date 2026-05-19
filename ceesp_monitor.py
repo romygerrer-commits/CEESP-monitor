@@ -1,8 +1,6 @@
 import os
-import re
 import json
 import time
-
 import pandas as pd
 import requests
 
@@ -95,175 +93,117 @@ def load_data():
 
     driver.get(TABLEAU_URL)
 
-    time.sleep(25)
+    time.sleep(30)
 
-    print("Extracting Tableau data...")
+    print("Reading rendered page...")
 
-    tableau_data = driver.execute_script(
-        """
-        function findVizObject() {
-
-            for (const key in window) {
-
-                try {
-
-                    const value = window[key];
-
-                    if (
-                        value &&
-                        typeof value === 'object'
-                    ) {
-
-                        if (
-                            value._workbookImpl
-                        ) {
-
-                            return value;
-                        }
-                    }
-
-                } catch(e) {}
-            }
-
-            return null;
-        }
-
-        const viz = findVizObject();
-
-        if (!viz) {
-
-            return null;
-        }
-
-        const workbook =
-            viz._workbookImpl;
-
-        const sheets =
-            workbook._sheets;
-
-        let output = [];
-
-        for (const sheet of sheets) {
-
-            try {
-
-                const name =
-                    sheet._name;
-
-                const data =
-                    sheet._dataSegments;
-
-                if (!data) {
-                    continue;
-                }
-
-                output.push({
-                    name: name,
-                    data: JSON.stringify(data)
-                });
-
-            } catch(e) {}
-        }
-
-        return output;
-        """
-    )
+    page_source = driver.page_source
 
     driver.quit()
 
-    if not tableau_data:
+    if (
+        "Nom commercial"
+        not in page_source
+    ):
+
+        with open(
+            "debug_page.html",
+            "w",
+            encoding="utf-8"
+        ) as f:
+
+            f.write(page_source)
 
         raise Exception(
-            "Could not extract Tableau data"
+            "Could not find CEESP data "
+            "inside rendered page"
         )
 
-    print(
-        f"{len(tableau_data)} "
-        "worksheets found"
-    )
+    rows = []
 
-    extracted_rows = []
+    lines = page_source.splitlines()
 
-    for sheet in tableau_data:
+    for line in lines:
 
-        try:
+        if (
+            "Nom commercial"
+            in line
+            or "Indication"
+            in line
+            or "Commune internationale"
+            in line
+        ):
 
-            raw = json.loads(
-                sheet["data"]
-            )
+            continue
 
-            raw_text = json.dumps(raw)
+        if (
+            "https://"
+            in line
+            and "medicament"
+            in line.lower()
+        ):
 
-            if (
-                "Nom commercial"
-                not in raw_text
-            ):
+            try:
 
-                continue
+                cleaned = (
+                    line
+                    .replace("\\u003c", "<")
+                    .replace("\\u003e", ">")
+                    .replace("\\n", " ")
+                    .replace("\\", "")
+                )
 
-            print(
-                f"Using worksheet: "
-                f"{sheet['name']}"
-            )
+                parts = cleaned.split("|")
 
-            values = re.findall(
-                r'"value":"([^"]*)"',
-                raw_text
-            )
+                if len(parts) < 3:
 
-            if len(values) < 20:
-
-                continue
-
-            for i in range(
-                0,
-                len(values),
-                5
-            ):
-
-                chunk = values[i:i + 5]
-
-                if len(chunk) < 3:
                     continue
 
-                extracted_rows.append({
+                rows.append({
 
                     "nom commercial":
-                        chunk[0],
+                        parts[0].strip(),
 
                     "dci":
-                        chunk[1],
+                        parts[1].strip(),
 
                     "indication":
-                        chunk[2],
+                        parts[2].strip(),
 
                     "date":
-                        chunk[3]
-                        if len(chunk) > 3
+                        parts[3].strip()
+                        if len(parts) > 3
                         else "",
 
                     "lien":
-                        chunk[4]
-                        if len(chunk) > 4
+                        parts[4].strip()
+                        if len(parts) > 4
                         else ""
                 })
 
-        except Exception as e:
+            except Exception:
 
-            print(
-                f"Error parsing worksheet "
-                f"{sheet['name']}: {e}"
-            )
+                pass
 
-    if not extracted_rows:
+    if not rows:
 
-        raise Exception(
-            "Could not parse CEESP data"
+        print(
+            "Saving debug HTML..."
         )
 
-    df = pd.DataFrame(
-        extracted_rows
-    )
+        with open(
+            "debug_page.html",
+            "w",
+            encoding="utf-8"
+        ) as f:
+
+            f.write(page_source)
+
+        raise Exception(
+            "No CEESP rows extracted"
+        )
+
+    df = pd.DataFrame(rows)
 
     df.columns = [
         normalize_col(c)
