@@ -36,27 +36,39 @@ def setup_driver():
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,12000")
 
-    driver = webdriver.Chrome(options=options)
+    driver = webdriver.Chrome(
+        options=options
+    )
 
     return driver
 
 
 def scroll_table(driver):
 
-    driver.execute_script("""
-
-        const els = Array.from(document.querySelectorAll("*"));
+    driver.execute_script(
+        """
+        const els = Array.from(
+            document.querySelectorAll("*")
+        );
 
         let target = null;
         let maxScroll = 0;
 
         for (const el of els) {
 
-            if (el.scrollHeight > el.clientHeight) {
+            if (
+                el.scrollHeight >
+                el.clientHeight
+            ) {
 
-                if (el.scrollHeight > maxScroll) {
+                if (
+                    el.scrollHeight >
+                    maxScroll
+                ) {
 
-                    maxScroll = el.scrollHeight;
+                    maxScroll =
+                        el.scrollHeight;
+
                     target = el;
                 }
             }
@@ -66,8 +78,8 @@ def scroll_table(driver):
 
             target.scrollTop += 800;
         }
-
-    """)
+        """
+    )
 
 
 def extract_all_cells(driver):
@@ -77,9 +89,10 @@ def extract_all_cells(driver):
     seen = set()
 
     stable = 0
+
     previous_len = 0
 
-    for i in range(200):
+    for i in range(250):
 
         time.sleep(2)
 
@@ -88,21 +101,44 @@ def extract_all_cells(driver):
             "div[role='gridcell']"
         )
 
+        current_cells = []
+
         for cell in cells:
 
-            txt = normalize_text(cell.text)
+            txt = normalize_text(
+                cell.text
+            )
 
             if txt == "":
                 continue
 
-            if txt in seen:
+            current_cells.append(txt)
+
+        # IMPORTANT:
+        # on ajoute dans l'ordre
+        # sans casser la structure
+        # mais on évite les doublons
+        # CONSÉCUTIFS
+
+        for txt in current_cells:
+
+            key = (
+                str(len(collected))
+                + "|"
+                + txt
+            )
+
+            if key in seen:
                 continue
 
-            seen.add(txt)
+            seen.add(key)
 
             collected.append(txt)
 
-        print(f"Iteration {i} | {len(collected)} cells")
+        print(
+            f"Iteration {i} | "
+            f"{len(collected)} cells"
+        )
 
         if len(collected) == previous_len:
 
@@ -116,7 +152,10 @@ def extract_all_cells(driver):
 
         if stable >= 10:
 
-            print("End reached")
+            print(
+                "End reached"
+            )
+
             break
 
         scroll_table(driver)
@@ -128,26 +167,53 @@ def rebuild_rows(cells):
 
     rows = []
 
-    i = 0
+    total = len(cells)
 
-    while i + 3 < len(cells):
+    # structure Tableau:
+    # noms
+    # dci
+    # indications
+    # dates
 
-        nom = cells[i]
-        dci = cells[i + 1]
-        indication = cells[i + 2]
-        date = cells[i + 3]
+    n = total // 4
 
-        rows.append({
+    noms = cells[0:n]
 
-            "nom commercial": nom,
-            "dci": dci,
-            "indication": indication,
-            "date": date,
-            "lien": ""
+    dcis = cells[n:n * 2]
 
-        })
+    indications = cells[
+        n * 2:n * 3
+    ]
 
-        i += 4
+    dates = cells[
+        n * 3:n * 4
+    ]
+
+    for i in range(n):
+
+        try:
+
+            rows.append({
+
+                "nom commercial":
+                    noms[i],
+
+                "dci":
+                    dcis[i],
+
+                "indication":
+                    indications[i],
+
+                "date":
+                    dates[i],
+
+                "lien":
+                    ""
+            })
+
+        except Exception:
+
+            pass
 
     return rows
 
@@ -158,23 +224,33 @@ def load_data():
 
     driver = setup_driver()
 
-    print("Opening Tableau dashboard...")
+    print(
+        "Opening Tableau dashboard..."
+    )
 
     driver.get(TABLEAU_URL)
 
     time.sleep(20)
 
-    print("Scrolling through Tableau...")
+    print(
+        "Scrolling through Tableau..."
+    )
 
-    cells = extract_all_cells(driver)
+    cells = extract_all_cells(
+        driver
+    )
 
     driver.quit()
 
-    print(f"{len(cells)} cells extracted")
+    print(
+        f"{len(cells)} cells extracted"
+    )
 
     if len(cells) == 0:
 
-        raise Exception("No Tableau cells extracted")
+        raise Exception(
+            "No Tableau cells extracted"
+        )
 
     print("Rebuilding rows...")
 
@@ -190,11 +266,22 @@ def load_data():
 def make_key(row):
 
     return (
-        normalize_text(row["nom commercial"])
+
+        normalize_text(
+            row["nom commercial"]
+        )
+
         + "|"
-        + normalize_text(row["dci"])
+
+        + normalize_text(
+            row["dci"]
+        )
+
         + "|"
-        + normalize_text(row["indication"])
+
+        + normalize_text(
+            row["indication"]
+        )
     )
 
 
@@ -227,13 +314,16 @@ def send_teams(rows):
     )
 
     print(
-        f"Teams notification: {response.status_code}"
+        f"Teams notification: "
+        f"{response.status_code}"
     )
 
 
 def main():
 
-    print("Starting CEESP monitor")
+    print(
+        "Starting CEESP monitor"
+    )
 
     df = load_data()
 
@@ -244,15 +334,21 @@ def main():
 
     old_keys = set()
 
-    if os.path.exists(HISTORY_FILE):
+    if os.path.exists(
+        HISTORY_FILE
+    ):
 
         try:
 
-            old_df = pd.read_csv(HISTORY_FILE)
+            old_df = pd.read_csv(
+                HISTORY_FILE
+            )
 
             if "key" in old_df.columns:
 
-                old_keys = set(old_df["key"])
+                old_keys = set(
+                    old_df["key"]
+                )
 
         except Exception:
 
@@ -262,7 +358,10 @@ def main():
         ~df["key"].isin(old_keys)
     ]
 
-    print(f"{len(new_rows)} new rows detected")
+    print(
+        f"{len(new_rows)} "
+        f"new rows detected"
+    )
 
     if not new_rows.empty:
 
@@ -273,7 +372,9 @@ def main():
         index=False
     )
 
-    print("History updated")
+    print(
+        "History updated"
+    )
 
 
 if __name__ == "__main__":
