@@ -95,118 +95,85 @@ def load_data():
 
     time.sleep(30)
 
-    print("Extracting visible text...")
+    print("Extracting Tableau rows...")
 
-    body_text = driver.find_element(
-        "tag name",
-        "body"
-    ).text
+    rows_data = driver.execute_script(
+        """
+        const rows = [];
+
+        const allDivs =
+            document.querySelectorAll("div");
+
+        for (const div of allDivs) {
+
+            const role =
+                div.getAttribute("role");
+
+            if (role !== "row") {
+                continue;
+            }
+
+            const cells =
+                div.querySelectorAll(
+                    '[role="gridcell"]'
+                );
+
+            if (cells.length < 4) {
+                continue;
+            }
+
+            const row = [];
+
+            for (const cell of cells) {
+
+                row.push(
+                    cell.innerText.trim()
+                );
+            }
+
+            rows.push(row);
+        }
+
+        return rows;
+        """
+    )
 
     driver.quit()
 
-    lines = [
+    if not rows_data:
 
-        line.strip()
-
-        for line in body_text.split("\n")
-
-        if line.strip()
-    ]
+        raise Exception(
+            "No Tableau rows found"
+        )
 
     print(
-        f"{len(lines)} text lines found"
+        f"{len(rows_data)} rows extracted"
     )
 
-    # suppression des headers
-    # et du bruit du dashboard
+    structured_rows = []
 
-    excluded = [
-
-        "nom co",
-        "dénomination",
-        "indication",
-        "validation",
-        "contribution",
-        "patient",
-        "filtrer",
-        "pathologie"
-
-    ]
-
-    cleaned = []
-
-    for line in lines:
-
-        lower = line.lower()
-
-        if any(
-            x in lower
-            for x in excluded
-        ):
-
-            continue
-
-        cleaned.append(line)
-
-    print(
-        f"{len(cleaned)} cleaned lines"
-    )
-
-    # Tableau extrait les colonnes
-    # verticalement :
-    #
-    # col1 entière
-    # col2 entière
-    # col3 entière
-    # col4 entière
-
-    n_rows = len(cleaned) // 4
-
-    print(
-        f"Estimated rows: {n_rows}"
-    )
-
-    col_nom = cleaned[0:n_rows]
-
-    col_dci = cleaned[
-        n_rows:n_rows * 2
-    ]
-
-    col_indication = cleaned[
-        n_rows * 2:n_rows * 3
-    ]
-
-    col_date = cleaned[
-        n_rows * 3:n_rows * 4
-    ]
-
-    rows = []
-
-    for i in range(n_rows):
+    for row in rows_data:
 
         try:
 
-            nom = col_nom[i]
+            nom = row[0]
 
-            dci = col_dci[i]
+            dci = row[1]
 
-            indication = col_indication[i]
+            indication = row[2]
 
-            date = col_date[i]
+            date = row[3]
+
+            # Ignore header row
 
             if (
-
-                len(nom) < 2
-
-                or len(dci) < 2
-
-                or len(indication) < 2
-
+                "nom co"
+                in nom.lower()
             ):
 
                 continue
 
-            rows.append({
+            structured_rows.append({
 
                 "nom commercial":
                     nom,
@@ -228,13 +195,15 @@ def load_data():
 
             pass
 
-    if not rows:
+    if not structured_rows:
 
         raise Exception(
-            "No CEESP rows extracted"
+            "No CEESP rows parsed"
         )
 
-    df = pd.DataFrame(rows)
+    df = pd.DataFrame(
+        structured_rows
+    )
 
     df.columns = [
         normalize_col(c)
@@ -261,11 +230,8 @@ def detect_columns(df):
             col_map["nom"] = col
 
         elif (
-
             "commune internationale" in col
-
             or "dci" in col
-
         ):
 
             col_map["dci"] = col
@@ -275,23 +241,16 @@ def detect_columns(df):
             col_map["indication"] = col
 
         elif (
-
             "validation" in col
-
             or "date" in col
-
         ):
 
             col_map["date"] = col
 
         elif (
-
             "lien" in col
-
             or "link" in col
-
             or "url" in col
-
         ):
 
             col_map["lien"] = col
@@ -315,8 +274,7 @@ def detect_columns(df):
             )
 
             raise Exception(
-                f"Missing required "
-                f"column: {req}"
+                f"Missing required column: {req}"
             )
 
     print("Detected columns:")
@@ -329,19 +287,14 @@ def detect_columns(df):
 def make_key(row, col_map):
 
     return (
-
         normalize_text(
             row[col_map["nom"]]
         )
-
         + "|"
-
         + normalize_text(
             row[col_map["dci"]]
         )
-
         + "|"
-
         + normalize_text(
             row[col_map["indication"]]
         )
@@ -361,8 +314,7 @@ def send_teams(rows, col_map):
         text = (
             "🏛️ **Nouveaux avis "
             "CEESP détectés**\n\n"
-            f"{count} nouveaux avis "
-            "publiés\n\n"
+            f"{count} nouveaux avis publiés\n\n"
         )
 
     else:
@@ -418,8 +370,7 @@ def send_teams(rows, col_map):
 
     print(
         f"Teams notification sent "
-        f"(status "
-        f"{response.status_code})"
+        f"(status {response.status_code})"
     )
 
 
@@ -434,12 +385,10 @@ def main():
     col_map = detect_columns(df)
 
     df["key"] = df.apply(
-
         lambda row: make_key(
             row,
             col_map
         ),
-
         axis=1
     )
 
