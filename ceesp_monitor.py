@@ -6,6 +6,7 @@ import requests
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
 
 
 TABLEAU_URL = (
@@ -59,6 +60,66 @@ def format_date_fr(value):
     return normalize_text(value)
 
 
+def extract_rows(driver):
+
+    rows = []
+
+    row_elements = driver.find_elements(
+        By.CSS_SELECTOR,
+        '[role="row"]'
+    )
+
+    for row_el in row_elements:
+
+        try:
+
+            cells = row_el.find_elements(
+                By.CSS_SELECTOR,
+                '[role="gridcell"]'
+            )
+
+            if len(cells) < 4:
+
+                continue
+
+            values = [
+                c.text.strip()
+                for c in cells
+            ]
+
+            if (
+                not values[0]
+                or "nom co"
+                in values[0].lower()
+            ):
+
+                continue
+
+            rows.append({
+
+                "nom commercial":
+                    values[0],
+
+                "dci":
+                    values[1],
+
+                "indication":
+                    values[2],
+
+                "date":
+                    values[3],
+
+                "lien":
+                    ""
+            })
+
+        except Exception:
+
+            pass
+
+    return rows
+
+
 def load_data():
 
     print("Launching Chrome...")
@@ -82,7 +143,7 @@ def load_data():
     )
 
     chrome_options.add_argument(
-        "--window-size=1920,1080"
+        "--window-size=1920,3000"
     )
 
     driver = webdriver.Chrome(
@@ -93,117 +154,59 @@ def load_data():
 
     driver.get(TABLEAU_URL)
 
-    time.sleep(30)
+    time.sleep(20)
 
-    print("Extracting Tableau rows...")
+    print("Scrolling Tableau table...")
 
-    rows_data = driver.execute_script(
-        """
-        const rows = [];
+    all_rows = []
 
-        const allDivs =
-            document.querySelectorAll("div");
+    seen = set()
 
-        for (const div of allDivs) {
+    last_count = 0
 
-            const role =
-                div.getAttribute("role");
+    for _ in range(30):
 
-            if (role !== "row") {
-                continue;
-            }
+        current_rows = extract_rows(driver)
 
-            const cells =
-                div.querySelectorAll(
-                    '[role="gridcell"]'
-                );
+        for row in current_rows:
 
-            if (cells.length < 4) {
-                continue;
-            }
+            key = (
+                row["nom commercial"]
+                + "|"
+                + row["dci"]
+            )
 
-            const row = [];
+            if key not in seen:
 
-            for (const cell of cells) {
+                seen.add(key)
 
-                row.push(
-                    cell.innerText.trim()
-                );
-            }
+                all_rows.append(row)
 
-            rows.push(row);
-        }
+        driver.execute_script(
+            "window.scrollBy(0, 1500);"
+        )
 
-        return rows;
-        """
-    )
+        time.sleep(2)
+
+        if len(all_rows) == last_count:
+
+            break
+
+        last_count = len(all_rows)
+
+        print(
+            f"{len(all_rows)} rows collected"
+        )
 
     driver.quit()
 
-    if not rows_data:
+    if not all_rows:
 
         raise Exception(
-            "No Tableau rows found"
+            "No CEESP rows extracted"
         )
 
-    print(
-        f"{len(rows_data)} rows extracted"
-    )
-
-    structured_rows = []
-
-    for row in rows_data:
-
-        try:
-
-            nom = row[0]
-
-            dci = row[1]
-
-            indication = row[2]
-
-            date = row[3]
-
-            # Ignore header row
-
-            if (
-                "nom co"
-                in nom.lower()
-            ):
-
-                continue
-
-            structured_rows.append({
-
-                "nom commercial":
-                    nom,
-
-                "dci":
-                    dci,
-
-                "indication":
-                    indication,
-
-                "date":
-                    date,
-
-                "lien":
-                    ""
-            })
-
-        except Exception:
-
-            pass
-
-    if not structured_rows:
-
-        raise Exception(
-            "No CEESP rows parsed"
-        )
-
-    df = pd.DataFrame(
-        structured_rows
-    )
+    df = pd.DataFrame(all_rows)
 
     df.columns = [
         normalize_col(c)
@@ -247,14 +250,6 @@ def detect_columns(df):
 
             col_map["date"] = col
 
-        elif (
-            "lien" in col
-            or "link" in col
-            or "url" in col
-        ):
-
-            col_map["lien"] = col
-
     required = [
         "nom",
         "dci",
@@ -265,21 +260,9 @@ def detect_columns(df):
 
         if req not in col_map:
 
-            print(
-                "Available columns:"
-            )
-
-            print(
-                df.columns.tolist()
-            )
-
             raise Exception(
                 f"Missing required column: {req}"
             )
-
-    print("Detected columns:")
-
-    print(col_map)
 
     return col_map
 
@@ -312,16 +295,14 @@ def send_teams(rows, col_map):
     if count > 1:
 
         text = (
-            "🏛️ **Nouveaux avis "
-            "CEESP détectés**\n\n"
+            "🏛️ **Nouveaux avis CEESP détectés**\n\n"
             f"{count} nouveaux avis publiés\n\n"
         )
 
     else:
 
         text = (
-            "🏛️ **Nouvel avis "
-            "CEESP détecté**\n\n"
+            "🏛️ **Nouvel avis CEESP détecté**\n\n"
             "1 nouvel avis publié\n\n"
         )
 
@@ -362,53 +343,36 @@ def send_teams(rows, col_map):
         "text": text
     }
 
-    response = requests.post(
+    requests.post(
         TEAMS_WEBHOOK,
         json=payload,
         timeout=30
     )
 
-    print(
-        f"Teams notification sent "
-        f"(status {response.status_code})"
-    )
-
 
 def main():
 
-    print(
-        "Starting CEESP monitor"
-    )
+    print("Starting CEESP monitor")
 
     df = load_data()
 
     col_map = detect_columns(df)
 
     df["key"] = df.apply(
-        lambda row: make_key(
-            row,
+        lambda r: make_key(
+            r,
             col_map
         ),
         axis=1
     )
 
-    if os.path.exists(
-        HISTORY_FILE
-    ):
+    if os.path.exists(HISTORY_FILE):
 
-        old_df = pd.read_csv(
-            HISTORY_FILE
+        old = pd.read_csv(HISTORY_FILE)
+
+        old_keys = set(
+            old["key"]
         )
-
-        if "key" in old_df.columns:
-
-            old_keys = set(
-                old_df["key"]
-            )
-
-        else:
-
-            old_keys = set()
 
     else:
 
@@ -421,8 +385,7 @@ def main():
     if not new_rows.empty:
 
         print(
-            f"{len(new_rows)} "
-            "new CEESP rows detected"
+            f"{len(new_rows)} new rows detected"
         )
 
         send_teams(
@@ -441,9 +404,7 @@ def main():
         index=False
     )
 
-    print(
-        "History updated"
-    )
+    print("History updated")
 
 
 if __name__ == "__main__":
