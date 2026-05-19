@@ -56,34 +56,49 @@ def load_data():
 
     print("Loading Tableau dashboard...")
 
-    ts = TS()
+    tableau_urls = [
 
-    ts.session.headers.update({
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/122.0.0.0 Safari/537.36"
-        )
-    })
+        (
+            "https://public.tableau.com/views/"
+            "Contributionpatient/Tableaudebord5"
+            "?:showVizHome=no"
+        ),
 
-    try:
-
-        ts.loads(TABLEAU_URL)
-
-    except Exception as e:
-
-        print(f"Initial Tableau load failed: {e}")
-
-        print("Trying fallback URL...")
-
-        fallback_url = (
+        (
             "https://public.tableau.com/views/"
             "Contributionpatient/Tableaudebord5"
             "?:language=fr-FR&:display_count=n"
             "&:origin=viz_share_link"
         )
+    ]
 
-        ts.loads(fallback_url)
+    ts = TS()
+
+    loaded = False
+
+    for url in tableau_urls:
+
+        try:
+
+            print(f"Trying URL: {url}")
+
+            ts.loads(url)
+
+            loaded = True
+
+            print("Tableau loaded successfully")
+
+            break
+
+        except Exception as e:
+
+            print(f"Failed loading Tableau: {e}")
+
+    if not loaded:
+
+        raise Exception(
+            "Unable to load Tableau dashboard"
+        )
 
     workbook = ts.getWorkbook()
 
@@ -98,11 +113,14 @@ def load_data():
 
         try:
 
+            print(f"Trying worksheet: {ws_name}")
+
             ws = workbook.getWorksheet(ws_name)
 
             df = ws.data
 
             if df.empty:
+
                 continue
 
             cols = [
@@ -110,7 +128,6 @@ def load_data():
                 for c in df.columns
             ]
 
-            print(f"Worksheet {ws_name}:")
             print(cols)
 
             if any(
@@ -119,12 +136,18 @@ def load_data():
             ):
 
                 target_ws = ws_name
+
+                print(
+                    f"Found CEESP worksheet: "
+                    f"{target_ws}"
+                )
+
                 break
 
         except Exception as e:
 
             print(
-                f"Error reading worksheet "
+                f"Worksheet error "
                 f"{ws_name}: {e}"
             )
 
@@ -134,8 +157,6 @@ def load_data():
             "Could not find worksheet "
             "containing CEESP data"
         )
-
-    print(f"Using worksheet: {target_ws}")
 
     ws = workbook.getWorksheet(target_ws)
 
