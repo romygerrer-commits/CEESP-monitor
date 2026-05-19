@@ -1,5 +1,7 @@
 import os
+import re
 import time
+
 import pandas as pd
 import requests
 
@@ -15,6 +17,13 @@ TABLEAU_URL = (
 TEAMS_WEBHOOK = os.environ["TEAMS_WEBHOOK"]
 
 HISTORY_FILE = "history.csv"
+
+
+MONTHS = [
+    "Jan", "Feb", "Mar", "Apr",
+    "May", "Jun", "Jul", "Aug",
+    "Sep", "Oct", "Nov", "Dec"
+]
 
 
 def normalize_col(col):
@@ -58,6 +67,17 @@ def format_date_fr(value):
     return normalize_text(value)
 
 
+def is_date_line(text):
+
+    for m in MONTHS:
+
+        if text.startswith(m):
+
+            return True
+
+    return False
+
+
 def load_data():
 
     print("Launching Chrome...")
@@ -81,7 +101,7 @@ def load_data():
     )
 
     chrome_options.add_argument(
-        "--window-size=1920,3000"
+        "--window-size=1920,5000"
     )
 
     driver = webdriver.Chrome(
@@ -94,107 +114,111 @@ def load_data():
 
     time.sleep(20)
 
-    print("Extracting Tableau internal data...")
+    print("Extracting visible text...")
 
-    data = driver.execute_script(
-        """
-        const results = [];
-
-        const allObjects = Object.values(window);
-
-        for (const obj of allObjects) {
-
-            try {
-
-                if (
-                    obj &&
-                    obj._sheetImpl &&
-                    obj._sheetImpl._columns
-                ) {
-
-                    const sheet =
-                        obj._sheetImpl;
-
-                    const columns =
-                        sheet._columns;
-
-                    const rows =
-                        sheet._data;
-
-                    results.push({
-                        columns: columns,
-                        rows: rows
-                    });
-                }
-
-            } catch(e) {}
-        }
-
-        return results;
-        """
-    )
+    body_text = driver.find_element(
+        "tag name",
+        "body"
+    ).text
 
     driver.quit()
 
-    if not data:
+    raw_lines = [
 
-        raise Exception(
-            "No Tableau data found"
-        )
+        line.strip()
+
+        for line in body_text.split("\n")
+
+        if line.strip()
+    ]
 
     print(
-        f"{len(data)} Tableau objects found"
+        f"{len(raw_lines)} raw lines"
     )
 
-    best_rows = []
+    excluded = [
 
-    for obj in data:
+        "nom co",
+        "dénomination",
+        "indication courte",
+        "validation",
+        "pathologie"
 
-        try:
+    ]
 
-            columns = obj["columns"]
+    lines = []
 
-            rows = obj["rows"]
+    for line in raw_lines:
 
-            if not rows:
+        lower = line.lower()
 
-                continue
+        if any(
+            x in lower
+            for x in excluded
+        ):
 
-            if len(rows) < len(best_rows):
+            continue
 
-                continue
+        lines.append(line)
 
-            best_rows = rows
+    print(
+        f"{len(lines)} cleaned lines"
+    )
 
-        except Exception:
+    # détecte les dates
 
-            pass
+    date_lines = [
+        x for x in lines
+        if is_date_line(x)
+    ]
 
-    if not best_rows:
+    n_rows = len(date_lines)
+
+    print(
+        f"Detected {n_rows} rows"
+    )
+
+    if n_rows == 0:
 
         raise Exception(
-            "No Tableau rows found"
+            "Could not detect rows"
         )
 
-    structured_rows = []
+    # reconstruction colonnes
 
-    for row in best_rows:
+    col_nom = lines[0:n_rows]
+
+    col_dci = lines[
+        n_rows:n_rows * 2
+    ]
+
+    col_indication = lines[
+        n_rows * 2:n_rows * 3
+    ]
+
+    col_date = lines[
+        n_rows * 3:n_rows * 4
+    ]
+
+    rows = []
+
+    for i in range(n_rows):
 
         try:
 
-            structured_rows.append({
+            rows.append({
 
                 "nom commercial":
-                    row[0],
+                    col_nom[i],
 
                 "dci":
-                    row[1],
+                    col_dci[i],
 
                 "indication":
-                    row[2],
+                    col_indication[i],
 
                 "date":
-                    row[3],
+                    col_date[i],
 
                 "lien":
                     ""
@@ -204,24 +228,18 @@ def load_data():
 
             pass
 
-    if not structured_rows:
+    if not rows:
 
         raise Exception(
-            "No structured rows parsed"
+            "No rows reconstructed"
         )
 
-    df = pd.DataFrame(
-        structured_rows
-    )
+    df = pd.DataFrame(rows)
 
     df.columns = [
         normalize_col(c)
         for c in df.columns
     ]
-
-    print(
-        f"{len(df)} rows loaded"
-    )
 
     print(df.head(20))
 
@@ -231,25 +249,40 @@ def load_data():
 def detect_columns(df):
 
     return {
-        "nom": "nom commercial",
-        "dci": "dci",
-        "indication": "indication",
-        "date": "date",
-        "lien": "lien"
+
+        "nom":
+            "nom commercial",
+
+        "dci":
+            "dci",
+
+        "indication":
+            "indication",
+
+        "date":
+            "date",
+
+        "lien":
+            "lien"
     }
 
 
 def make_key(row, col_map):
 
     return (
+
         normalize_text(
             row[col_map["nom"]]
         )
+
         + "|"
+
         + normalize_text(
             row[col_map["dci"]]
         )
+
         + "|"
+
         + normalize_text(
             row[col_map["indication"]]
         )
