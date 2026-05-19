@@ -1,6 +1,7 @@
 import os
-import json
+import re
 import time
+
 import pandas as pd
 import requests
 
@@ -95,109 +96,88 @@ def load_data():
 
     time.sleep(30)
 
-    print("Reading rendered page...")
+    print("Extracting visible text...")
 
-    page_source = driver.page_source
+    body_text = driver.find_element(
+        "tag name",
+        "body"
+    ).text
 
     driver.quit()
 
-    if (
-        "Nom commercial"
-        not in page_source
-    ):
+    lines = [
 
-        with open(
-            "debug_page.html",
-            "w",
-            encoding="utf-8"
-        ) as f:
+        line.strip()
 
-            f.write(page_source)
+        for line in body_text.split("\n")
 
-        raise Exception(
-            "Could not find CEESP data "
-            "inside rendered page"
-        )
+        if line.strip()
+    ]
+
+    print(
+        f"{len(lines)} text lines found"
+    )
 
     rows = []
 
-    lines = page_source.splitlines()
+    i = 0
 
-    for line in lines:
+    while i < len(lines) - 3:
 
-        if (
-            "Nom commercial"
-            in line
-            or "Indication"
-            in line
-            or "Commune internationale"
-            in line
-        ):
+        try:
 
-            continue
+            nom = lines[i]
 
-        if (
-            "https://"
-            in line
-            and "medicament"
-            in line.lower()
-        ):
+            dci = lines[i + 1]
 
-            try:
+            indication = lines[i + 2]
 
-                cleaned = (
-                    line
-                    .replace("\\u003c", "<")
-                    .replace("\\u003e", ">")
-                    .replace("\\n", " ")
-                    .replace("\\", "")
-                )
+            date = ""
 
-                parts = cleaned.split("|")
+            if re.search(
+                r"\d{2}/\d{2}/\d{4}",
+                lines[i + 3]
+            ):
 
-                if len(parts) < 3:
+                date = lines[i + 3]
 
-                    continue
+                i += 1
+
+            if (
+
+                len(nom) > 2
+
+                and len(dci) > 2
+
+                and len(indication) > 5
+
+            ):
 
                 rows.append({
 
                     "nom commercial":
-                        parts[0].strip(),
+                        nom,
 
                     "dci":
-                        parts[1].strip(),
+                        dci,
 
                     "indication":
-                        parts[2].strip(),
+                        indication,
 
                     "date":
-                        parts[3].strip()
-                        if len(parts) > 3
-                        else "",
+                        date,
 
                     "lien":
-                        parts[4].strip()
-                        if len(parts) > 4
-                        else ""
+                        ""
                 })
 
-            except Exception:
+            i += 3
 
-                pass
+        except Exception:
+
+            i += 1
 
     if not rows:
-
-        print(
-            "Saving debug HTML..."
-        )
-
-        with open(
-            "debug_page.html",
-            "w",
-            encoding="utf-8"
-        ) as f:
-
-            f.write(page_source)
 
         raise Exception(
             "No CEESP rows extracted"
@@ -228,8 +208,11 @@ def detect_columns(df):
             col_map["nom"] = col
 
         elif (
+
             "commune internationale" in col
+
             or "dci" in col
+
         ):
 
             col_map["dci"] = col
@@ -239,16 +222,23 @@ def detect_columns(df):
             col_map["indication"] = col
 
         elif (
+
             "validation" in col
+
             or "date" in col
+
         ):
 
             col_map["date"] = col
 
         elif (
+
             "lien" in col
+
             or "link" in col
+
             or "url" in col
+
         ):
 
             col_map["lien"] = col
@@ -286,14 +276,19 @@ def detect_columns(df):
 def make_key(row, col_map):
 
     return (
+
         normalize_text(
             row[col_map["nom"]]
         )
+
         + "|"
+
         + normalize_text(
             row[col_map["dci"]]
         )
+
         + "|"
+
         + normalize_text(
             row[col_map["indication"]]
         )
@@ -351,10 +346,13 @@ def send_teams(rows, col_map):
             )
 
         if (
+
             "lien" in col_map
+
             and pd.notna(
                 row[col_map["lien"]]
             )
+
         ):
 
             link = normalize_text(
@@ -403,10 +401,12 @@ def main():
     col_map = detect_columns(df)
 
     df["key"] = df.apply(
+
         lambda row: make_key(
             row,
             col_map
         ),
+
         axis=1
     )
 
