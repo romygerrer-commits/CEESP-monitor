@@ -1,5 +1,4 @@
 import os
-import re
 import time
 
 import pandas as pd
@@ -78,6 +77,119 @@ def is_date_line(text):
     return False
 
 
+def extract_visible_lines(driver):
+
+    body_text = driver.find_element(
+        "tag name",
+        "body"
+    ).text
+
+    raw_lines = [
+
+        line.strip()
+
+        for line in body_text.split("\n")
+
+        if line.strip()
+    ]
+
+    excluded = [
+
+        "nom co",
+        "dénomination",
+        "indication courte",
+        "validation",
+        "pathologie",
+        "view on tableau public",
+        "share"
+
+    ]
+
+    cleaned = []
+
+    for line in raw_lines:
+
+        lower = line.lower()
+
+        if any(
+            x in lower
+            for x in excluded
+        ):
+
+            continue
+
+        cleaned.append(line)
+
+    return cleaned
+
+
+def rebuild_rows(lines):
+
+    date_lines = [
+
+        x for x in lines
+        if is_date_line(x)
+    ]
+
+    n_rows = len(date_lines)
+
+    if n_rows == 0:
+
+        return []
+
+    col_nom = lines[0:n_rows]
+
+    col_dci = lines[
+        n_rows:n_rows * 2
+    ]
+
+    col_indication = lines[
+        n_rows * 2:n_rows * 3
+    ]
+
+    col_date = lines[
+        n_rows * 3:n_rows * 4
+    ]
+
+    rows = []
+
+    for i in range(n_rows):
+
+        try:
+
+            nom = col_nom[i]
+
+            dci = col_dci[i]
+
+            indication = col_indication[i]
+
+            date = col_date[i]
+
+            rows.append({
+
+                "nom commercial":
+                    nom,
+
+                "dci":
+                    dci,
+
+                "indication":
+                    indication,
+
+                "date":
+                    date,
+
+                "lien":
+                    ""
+            })
+
+        except Exception:
+
+            pass
+
+    return rows
+
+
 def load_data():
 
     print("Launching Chrome...")
@@ -114,134 +226,84 @@ def load_data():
 
     time.sleep(20)
 
-    print("Extracting visible text...")
+    print("Scrolling Tableau table...")
 
-    body_text = driver.find_element(
-        "tag name",
-        "body"
-    ).text
+    all_rows = []
+
+    seen = set()
+
+    for i in range(100):
+
+        lines = extract_visible_lines(
+            driver
+        )
+
+        rows = rebuild_rows(lines)
+
+        for row in rows:
+
+            key = (
+                row["nom commercial"]
+                + "|"
+                + row["dci"]
+                + "|"
+                + row["indication"]
+            )
+
+            if key not in seen:
+
+                seen.add(key)
+
+                all_rows.append(row)
+
+        print(
+            f"{len(all_rows)} rows collected"
+        )
+
+        # scroll du vrai conteneur Tableau
+
+        driver.execute_script(
+            """
+            const scrollables = Array.from(
+                document.querySelectorAll('*')
+            ).filter(el =>
+                el.scrollHeight > el.clientHeight
+            );
+
+            if (scrollables.length > 0) {
+
+                scrollables.sort(
+                    (a, b) =>
+                    b.scrollHeight - a.scrollHeight
+                );
+
+                scrollables[0].scrollTop += 1500;
+            }
+            """
+        )
+
+        time.sleep(2)
 
     driver.quit()
 
-    raw_lines = [
-
-        line.strip()
-
-        for line in body_text.split("\n")
-
-        if line.strip()
-    ]
-
-    print(
-        f"{len(raw_lines)} raw lines"
-    )
-
-    excluded = [
-
-        "nom co",
-        "dénomination",
-        "indication courte",
-        "validation",
-        "pathologie"
-
-    ]
-
-    lines = []
-
-    for line in raw_lines:
-
-        lower = line.lower()
-
-        if any(
-            x in lower
-            for x in excluded
-        ):
-
-            continue
-
-        lines.append(line)
-
-    print(
-        f"{len(lines)} cleaned lines"
-    )
-
-    # détecte les dates
-
-    date_lines = [
-        x for x in lines
-        if is_date_line(x)
-    ]
-
-    n_rows = len(date_lines)
-
-    print(
-        f"Detected {n_rows} rows"
-    )
-
-    if n_rows == 0:
-
-        raise Exception(
-            "Could not detect rows"
-        )
-
-    # reconstruction colonnes
-
-    col_nom = lines[0:n_rows]
-
-    col_dci = lines[
-        n_rows:n_rows * 2
-    ]
-
-    col_indication = lines[
-        n_rows * 2:n_rows * 3
-    ]
-
-    col_date = lines[
-        n_rows * 3:n_rows * 4
-    ]
-
-    rows = []
-
-    for i in range(n_rows):
-
-        try:
-
-            rows.append({
-
-                "nom commercial":
-                    col_nom[i],
-
-                "dci":
-                    col_dci[i],
-
-                "indication":
-                    col_indication[i],
-
-                "date":
-                    col_date[i],
-
-                "lien":
-                    ""
-            })
-
-        except Exception:
-
-            pass
-
-    if not rows:
+    if not all_rows:
 
         raise Exception(
             "No rows reconstructed"
         )
 
-    df = pd.DataFrame(rows)
+    df = pd.DataFrame(all_rows)
 
     df.columns = [
         normalize_col(c)
         for c in df.columns
     ]
 
-    print(df.head(20))
+    print(
+        f"{len(df)} rows loaded"
+    )
+
+    print(df.tail(20))
 
     return df
 
