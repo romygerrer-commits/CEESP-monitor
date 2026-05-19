@@ -3,7 +3,7 @@ import requests
 import os
 from io import StringIO
 
-CSV_URL = "https://public.tableau.com/views/Contributionpatient/Tableaudebord5?:showVizHome=no&:format=csv"
+CSV_URL = "https://public.tableau.com/views/Contributionpatient/Tableaudebord5.csv?:showVizHome=no"
 
 TEAMS_WEBHOOK = os.environ["TEAMS_WEBHOOK"]
 HISTORY_FILE = "history.csv"
