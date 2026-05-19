@@ -62,60 +62,85 @@ def format_date_fr(value):
 
 def extract_rows(driver):
 
-    rows = []
-
-    row_elements = driver.find_elements(
+    cells = driver.find_elements(
         By.CSS_SELECTOR,
-        '[role="row"]'
+        '[role="gridcell"]'
     )
 
-    for row_el in row_elements:
+    values = []
 
-        try:
+    for cell in cells:
 
-            cells = row_el.find_elements(
-                By.CSS_SELECTOR,
-                '[role="gridcell"]'
-            )
+        text = cell.text.strip()
 
-            if len(cells) < 4:
+        if text:
 
-                continue
+            values.append(text)
 
-            values = [
-                c.text.strip()
-                for c in cells
-            ]
+    print(
+        f"{len(values)} cells found"
+    )
 
-            if (
-                not values[0]
-                or "nom co"
-                in values[0].lower()
-            ):
+    rows = []
 
-                continue
+    # Tableau = 4 colonnes visibles
+    # nom / dci / indication / date
 
-            rows.append({
+    for i in range(
+        0,
+        len(values),
+        4
+    ):
 
-                "nom commercial":
-                    values[0],
+        chunk = values[i:i + 4]
 
-                "dci":
-                    values[1],
+        if len(chunk) < 4:
 
-                "indication":
-                    values[2],
+            continue
 
-                "date":
-                    values[3],
+        nom = chunk[0]
 
-                "lien":
-                    ""
-            })
+        dci = chunk[1]
 
-        except Exception:
+        indication = chunk[2]
 
-            pass
+        date = chunk[3]
+
+        # ignore headers
+
+        if (
+            "nom co"
+            in nom.lower()
+        ):
+
+            continue
+
+        # ignore bruit
+
+        if (
+            len(nom) < 2
+            or len(dci) < 2
+        ):
+
+            continue
+
+        rows.append({
+
+            "nom commercial":
+                nom,
+
+            "dci":
+                dci,
+
+            "indication":
+                indication,
+
+            "date":
+                date,
+
+            "lien":
+                ""
+        })
 
     return rows
 
@@ -143,7 +168,7 @@ def load_data():
     )
 
     chrome_options.add_argument(
-        "--window-size=1920,3000"
+        "--window-size=1920,5000"
     )
 
     driver = webdriver.Chrome(
@@ -156,19 +181,17 @@ def load_data():
 
     time.sleep(20)
 
-    print("Scrolling Tableau table...")
-
     all_rows = []
 
     seen = set()
 
-    last_count = 0
+    print("Scrolling table...")
 
-    for _ in range(30):
+    for _ in range(25):
 
-        current_rows = extract_rows(driver)
+        rows = extract_rows(driver)
 
-        for row in current_rows:
+        for row in rows:
 
             key = (
                 row["nom commercial"]
@@ -183,16 +206,10 @@ def load_data():
                 all_rows.append(row)
 
         driver.execute_script(
-            "window.scrollBy(0, 1500);"
+            "window.scrollBy(0, 1200);"
         )
 
-        time.sleep(2)
-
-        if len(all_rows) == last_count:
-
-            break
-
-        last_count = len(all_rows)
+        time.sleep(1.5)
 
         print(
             f"{len(all_rows)} rows collected"
@@ -343,10 +360,15 @@ def send_teams(rows, col_map):
         "text": text
     }
 
-    requests.post(
+    response = requests.post(
         TEAMS_WEBHOOK,
         json=payload,
         timeout=30
+    )
+
+    print(
+        f"Teams notification sent "
+        f"(status {response.status_code})"
     )
 
 
@@ -370,9 +392,15 @@ def main():
 
         old = pd.read_csv(HISTORY_FILE)
 
-        old_keys = set(
-            old["key"]
-        )
+        if "key" in old.columns:
+
+            old_keys = set(
+                old["key"]
+            )
+
+        else:
+
+            old_keys = set()
 
     else:
 
