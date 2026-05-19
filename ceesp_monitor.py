@@ -2,7 +2,8 @@ import pandas as pd
 import requests
 import os
 from io import StringIO
-from tableau_scraper import TableauScraper as TS
+
+CSV_URL = "https://public.tableau.com/views/Contributionpatient/Tableaudebord5?:showVizHome=no&:format=csv"
 
 TEAMS_WEBHOOK = os.environ["TEAMS_WEBHOOK"]
 HISTORY_FILE = "history.csv"
@@ -32,30 +33,21 @@ def format_date_fr(value):
     return normalize_text(value)
 
 
-import re
-
-
-from tableau_scraper import TableauScraper as TS
-
-
 def load_data():
 
-    ts = TS()
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "text/csv",
+        "Referer": "https://public.tableau.com/views/Contributionpatient/Tableaudebord5"
+    }
 
-    ts.loads(
-        "https://public.tableau.com/views/Contributionpatient/Tableaudebord5?:showVizHome=no"
-    )
+    r = requests.get(CSV_URL, headers=headers, timeout=30)
+    r.raise_for_status()
 
-    workbook = ts.getWorkbook()
+    if "<html" in r.text.lower():
+        raise Exception("Tableau returned HTML instead of CSV")
 
-    print("Available worksheets:")
-    print(workbook.getWorksheetNames())
-
-    # Replace with correct worksheet name if needed
-    worksheet = workbook.getWorksheet("Tableaudebord5")
-
-    df = worksheet.data
-
+    df = pd.read_csv(StringIO(r.text))
     df.columns = [normalize_col(c) for c in df.columns]
 
     return df
