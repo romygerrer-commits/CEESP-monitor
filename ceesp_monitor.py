@@ -1,7 +1,6 @@
 import os
-import re
-import time
 import json
+import time
 import pandas as pd
 import requests
 
@@ -29,6 +28,7 @@ def normalize_col(col):
 def normalize_text(text):
 
     if pd.isna(text):
+
         return ""
 
     return str(text).strip()
@@ -37,6 +37,7 @@ def normalize_text(text):
 def format_date_fr(value):
 
     if pd.isna(value):
+
         return ""
 
     try:
@@ -105,7 +106,7 @@ def load_data():
         "performance"
     )
 
-    session_id = None
+    csv_url = None
 
     for entry in logs:
 
@@ -124,47 +125,40 @@ def load_data():
                     "request"
                 ]["url"]
 
-                if (
-                    "bootstrapSession/sessions/"
-                    in url
-                ):
+                if "getCsv" in url:
 
-                    match = re.search(
-                        r"sessions/([^/?]+)",
-                        url
+                    csv_url = url
+
+                    print(
+                        "CSV URL found:"
                     )
 
-                    if match:
+                    print(csv_url)
 
-                        session_id = (
-                            match.group(1)
-                        )
-
-                        print(
-                            f"Session ID found: "
-                            f"{session_id}"
-                        )
-
-                        break
+                    break
 
         except Exception:
 
             pass
 
+    cookies = driver.get_cookies()
+
     driver.quit()
 
-    if not session_id:
+    if not csv_url:
 
         raise Exception(
-            "Could not find Tableau session ID"
+            "Could not find Tableau CSV URL"
         )
 
-    bootstrap_url = (
-        "https://public.tableau.com"
-        "/vizql/w/Contributionpatient"
-        "/v/Tableaudebord5"
-        f"/bootstrapSession/sessions/{session_id}"
-    )
+    session = requests.Session()
+
+    for cookie in cookies:
+
+        session.cookies.set(
+            cookie["name"],
+            cookie["value"]
+        )
 
     headers = {
         "User-Agent": (
@@ -174,67 +168,30 @@ def load_data():
         "Accept": "*/*"
     }
 
-    payload = {
-        "worksheetPortSize": '{"w":1920,"h":1080}',
-        "dashboardPortSize": '{"w":1920,"h":1080}',
-        "clientDimension": '{"w":1920,"h":1080}',
-        "sheet_id": "Tableaudebord5",
-        "showParams": '{"checkpoint":false}'
-    }
-
-    print("Requesting Tableau bootstrap...")
-
-    response = requests.post(
-        bootstrap_url,
-        headers=headers,
-        data=payload,
-        timeout=60
-    )
-
-    response.raise_for_status()
-
-    text = response.text
-
-    csv_match = re.search(
-        r'csv\?sessionid=([^\"]+)',
-        text
-    )
-
-    if not csv_match:
-
-        print(text[:3000])
-
-        raise Exception(
-            "Could not find CSV endpoint"
-        )
-
-    csv_session = csv_match.group(1)
-
-    csv_url = (
-        "https://public.tableau.com/"
-        f"vizql/w/Contributionpatient"
-        f"/v/Tableaudebord5/csv"
-        f"?sessionid={csv_session}"
-    )
-
     print("Downloading CSV...")
 
-    csv_response = requests.get(
+    response = session.post(
         csv_url,
         headers=headers,
         timeout=60
     )
 
-    csv_response.raise_for_status()
+    response.raise_for_status()
 
-    if "<html" in csv_response.text.lower():
+    if "<html" in response.text.lower():
 
         raise Exception(
             "Received HTML instead of CSV"
         )
 
+    if len(response.text) < 100:
+
+        raise Exception(
+            "CSV response too short"
+        )
+
     df = pd.read_csv(
-        StringIO(csv_response.text)
+        StringIO(response.text)
     )
 
     df.columns = [
@@ -293,12 +250,22 @@ def detect_columns(df):
 
         if req not in col_map:
 
-            print(df.columns.tolist())
+            print(
+                "Available columns:"
+            )
+
+            print(
+                df.columns.tolist()
+            )
 
             raise Exception(
-                f"Missing required column: "
-                f"{req}"
+                f"Missing required "
+                f"column: {req}"
             )
+
+    print("Detected columns:")
+
+    print(col_map)
 
     return col_map
 
@@ -326,10 +293,24 @@ def send_teams(rows, col_map):
 
         return
 
-    text = (
-        "🏛️ **Nouveaux avis "
-        "CEESP détectés**\n\n"
-    )
+    count = len(rows)
+
+    if count > 1:
+
+        text = (
+            "🏛️ **Nouveaux avis "
+            "CEESP détectés**\n\n"
+            f"{count} nouveaux avis "
+            "publiés\n\n"
+        )
+
+    else:
+
+        text = (
+            "🏛️ **Nouvel avis "
+            "CEESP détecté**\n\n"
+            "1 nouvel avis publié\n\n"
+        )
 
     for _, row in rows.iterrows():
 
@@ -356,22 +337,53 @@ def send_teams(rows, col_map):
                 f"{format_date_fr(row[col_map['date']])}\n\n"
             )
 
+        if (
+            "lien" in col_map
+            and pd.notna(
+                row[col_map["lien"]]
+            )
+        ):
+
+            link = normalize_text(
+                row[col_map["lien"]]
+            )
+
+            if link:
+
+                text += (
+                    f"• Lien : {link}\n\n"
+                )
+
         text += "\n"
+
+    text += (
+        "🔎 Tableau de bord complet :\n"
+        "https://public.tableau.com/views/"
+        "Contributionpatient/Tableaudebord5\n"
+    )
 
     payload = {
         "text": text
     }
 
-    requests.post(
+    response = requests.post(
         TEAMS_WEBHOOK,
         json=payload,
         timeout=30
     )
 
+    print(
+        f"Teams notification sent "
+        f"(status "
+        f"{response.status_code})"
+    )
+
 
 def main():
 
-    print("Starting CEESP monitor")
+    print(
+        "Starting CEESP monitor"
+    )
 
     df = load_data()
 
@@ -385,15 +397,23 @@ def main():
         axis=1
     )
 
-    if os.path.exists(HISTORY_FILE):
+    if os.path.exists(
+        HISTORY_FILE
+    ):
 
         old_df = pd.read_csv(
             HISTORY_FILE
         )
 
-        old_keys = set(
-            old_df["key"]
-        ) if "key" in old_df.columns else set()
+        if "key" in old_df.columns:
+
+            old_keys = set(
+                old_df["key"]
+            )
+
+        else:
+
+            old_keys = set()
 
     else:
 
@@ -426,7 +446,9 @@ def main():
         index=False
     )
 
-    print("History updated")
+    print(
+        "History updated"
+    )
 
 
 if __name__ == "__main__":
