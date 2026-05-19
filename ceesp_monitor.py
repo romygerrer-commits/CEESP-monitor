@@ -2,6 +2,7 @@ import pandas as pd
 import requests
 import os
 from io import StringIO
+from tableau_scraper import TableauScraper as TS
 
 TEAMS_WEBHOOK = os.environ["TEAMS_WEBHOOK"]
 HISTORY_FILE = "history.csv"
@@ -34,82 +35,26 @@ def format_date_fr(value):
 import re
 
 
+from tableau_scraper import TableauScraper as TS
+
+
 def load_data():
 
-    session = requests.Session()
+    ts = TS()
 
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/124.0.0.0 Safari/537.36"
-        )
-    }
-
-    tableau_url = (
-        "https://public.tableau.com/views/"
-        "Contributionpatient/Tableaudebord5?:showVizHome=no"
+    ts.loads(
+        "https://public.tableau.com/views/Contributionpatient/Tableaudebord5?:showVizHome=no"
     )
 
-    # STEP 1 — Load Tableau page
-    r = session.get(tableau_url, headers=headers, timeout=30)
-    r.raise_for_status()
+    workbook = ts.getWorkbook()
 
-    # STEP 2 — Extract session ID
-    match = re.search(
-        r'bootstrapSession/sessions/([A-Z0-9\-]+)',
-        r.text
-    )
+    print("Available worksheets:")
+    print(workbook.getWorksheetNames())
 
-    if not match:
-        raise Exception("Could not find Tableau session ID")
+    # Replace with correct worksheet name if needed
+    worksheet = workbook.getWorksheet("Tableaudebord5")
 
-    session_id = match.group(1)
-
-    print("SESSION ID:", session_id)
-
-    # STEP 3 — Call bootstrap endpoint
-    bootstrap_url = (
-        "https://public.tableau.com/vizql/w/"
-        "Contributionpatient/v/Tableaudebord5/"
-        f"bootstrapSession/sessions/{session_id}"
-    )
-
-    payload = {
-        "sheet_id": "Tableaudebord5"
-    }
-
-    r2 = session.post(
-        bootstrap_url,
-        data=payload,
-        headers=headers,
-        timeout=30
-    )
-
-    r2.raise_for_status()
-
-    # STEP 4 — Extract CSV export URL
-    csv_match = re.search(
-        r'(/vizql/w/Contributionpatient/v/Tableaudebord5/viewData/sessions/.*?/views/.*?)"',
-        r2.text
-    )
-
-    if not csv_match:
-        print(r2.text[:5000])
-        raise Exception("Could not find CSV endpoint")
-
-    csv_path = csv_match.group(1)
-
-    csv_url = "https://public.tableau.com" + csv_path
-
-    print("CSV URL:", csv_url)
-
-    # STEP 5 — Download CSV data
-    r3 = session.get(csv_url, headers=headers, timeout=30)
-
-    r3.raise_for_status()
-
-    df = pd.read_csv(StringIO(r3.text))
+    df = worksheet.data
 
     df.columns = [normalize_col(c) for c in df.columns]
 
