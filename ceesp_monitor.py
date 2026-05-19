@@ -14,15 +14,23 @@ TABLEAU_URL = (
     "Contributionpatient/Tableaudebord5?:showVizHome=no"
 )
 
-CSV_URL = (
+CSV_BASE = (
     "https://public.tableau.com/views/"
-    "Contributionpatient/Tableaudebord5.csv"
-    "?:showVizHome=no"
+    "Contributionpatient/"
 )
 
 TEAMS_WEBHOOK = os.environ["TEAMS_WEBHOOK"]
 
 HISTORY_FILE = "history.csv"
+
+
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/122.0.0.0 Safari/537.36"
+    )
+}
 
 
 def normalize_col(col):
@@ -53,7 +61,9 @@ def format_date_fr(value):
 
         if pd.notna(date_obj):
 
-            return date_obj.strftime("%d/%m/%Y")
+            return date_obj.strftime(
+                "%d/%m/%Y"
+            )
 
     except Exception:
 
@@ -68,9 +78,25 @@ def initialize_tableau():
 
     chrome_options = Options()
 
-    chrome_options.add_argument("--headless=new")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument(
+        "--headless=new"
+    )
+
+    chrome_options.add_argument(
+        "--no-sandbox"
+    )
+
+    chrome_options.add_argument(
+        "--disable-dev-shm-usage"
+    )
+
+    chrome_options.add_argument(
+        "--disable-gpu"
+    )
+
+    chrome_options.add_argument(
+        "--window-size=1920,1080"
+    )
 
     driver = webdriver.Chrome(
         options=chrome_options
@@ -86,6 +112,8 @@ def initialize_tableau():
 
     session = requests.Session()
 
+    session.headers.update(HEADERS)
+
     for cookie in cookies:
 
         session.cookies.set(
@@ -100,33 +128,114 @@ def load_data():
 
     session = initialize_tableau()
 
-    print("Downloading CSV...")
+    print("Opening dashboard page...")
 
-    response = session.get(
-        CSV_URL,
+    page = session.get(
+        TABLEAU_URL,
         timeout=60
     )
 
-    response.raise_for_status()
+    page.raise_for_status()
 
-    if "<html" in response.text.lower():
+    possible_sheets = [
 
-        raise Exception(
-            "Tableau returned HTML instead of CSV"
-        )
+        "Tableaudebord5",
 
-    df = pd.read_csv(
-        StringIO(response.text)
-    )
+        "Feuil1",
 
-    df.columns = [
-        normalize_col(c)
-        for c in df.columns
+        "Sheet1",
+
+        "Dashboard",
+
+        "Tableau de bord",
+
+        "Feuille 1",
+
+        "Sheet 1"
     ]
 
-    print(f"{len(df)} rows loaded")
+    for sheet in possible_sheets:
 
-    return df
+        try:
+
+            csv_url = (
+                f"{CSV_BASE}"
+                f"{sheet}.csv"
+                "?:showVizHome=no"
+            )
+
+            print(
+                f"Trying CSV URL: "
+                f"{csv_url}"
+            )
+
+            response = session.get(
+                csv_url,
+                timeout=60
+            )
+
+            if response.status_code != 200:
+
+                print(
+                    f"Status code: "
+                    f"{response.status_code}"
+                )
+
+                continue
+
+            if "<html" in response.text.lower():
+
+                print(
+                    "Received HTML instead "
+                    "of CSV"
+                )
+
+                continue
+
+            if len(response.text) < 100:
+
+                print("CSV response too short")
+
+                continue
+
+            df = pd.read_csv(
+                StringIO(response.text)
+            )
+
+            if len(df.columns) < 2:
+
+                print(
+                    "Not enough columns"
+                )
+
+                continue
+
+            df.columns = [
+                normalize_col(c)
+                for c in df.columns
+            ]
+
+            print(
+                f"SUCCESS with worksheet: "
+                f"{sheet}"
+            )
+
+            print(
+                f"{len(df)} rows loaded"
+            )
+
+            return df
+
+        except Exception as e:
+
+            print(
+                f"Failed worksheet "
+                f"{sheet}: {e}"
+            )
+
+    raise Exception(
+        "Could not download Tableau CSV"
+    )
 
 
 def detect_columns(df):
@@ -175,9 +284,15 @@ def detect_columns(df):
 
         if req not in col_map:
 
+            print(df.columns.tolist())
+
             raise Exception(
-                f"Missing required column: {req}"
+                f"Missing required column: "
+                f"{req}"
             )
+
+    print("Detected columns:")
+    print(col_map)
 
     return col_map
 
@@ -210,14 +325,17 @@ def send_teams(rows, col_map):
     if count > 1:
 
         text = (
-            "🏛️ **Nouveaux avis CEESP détectés**\n\n"
-            f"{count} nouveaux avis publiés\n\n"
+            "🏛️ **Nouveaux avis "
+            "CEESP détectés**\n\n"
+            f"{count} nouveaux avis "
+            "publiés\n\n"
         )
 
     else:
 
         text = (
-            "🏛️ **Nouvel avis CEESP détecté**\n\n"
+            "🏛️ **Nouvel avis "
+            "CEESP détecté**\n\n"
             "1 nouvel avis publié\n\n"
         )
 
@@ -245,6 +363,14 @@ def send_teams(rows, col_map):
                 f"• Date de validation : "
                 f"{format_date_fr(row[col_map['date']])}\n\n"
             )
+
+        text += "\n"
+
+    text += (
+        "🔎 Tableau de bord complet :\n"
+        "https://public.tableau.com/views/"
+        "Contributionpatient/Tableaudebord5\n"
+    )
 
     payload = {
         "text": text
@@ -280,7 +406,9 @@ def main():
 
     if os.path.exists(HISTORY_FILE):
 
-        old_df = pd.read_csv(HISTORY_FILE)
+        old_df = pd.read_csv(
+            HISTORY_FILE
+        )
 
         if "key" in old_df.columns:
 
@@ -314,7 +442,9 @@ def main():
 
     else:
 
-        print("No new CEESP entries")
+        print(
+            "No new CEESP entries"
+        )
 
     df.to_csv(
         HISTORY_FILE,
