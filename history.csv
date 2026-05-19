@@ -1,5 +1,37 @@
 nom commercial,dci,indication,date,lien,key
 ITOBEVI,VYJUVEK,COLUMVI,OPDIVO/YER..,,ITOBEVI|VYJUVEK|COLUMVI
+TriClip™ G4,IMFINZI,KAFTRIO KA..,EVOLUT PRO..,,TriClip™ G4|IMFINZI|KAFTRIO KA..
+RYBREVANT ..,BLINCYTO,CARVYKTI,WEGOVY,,RYBREVANT ..|BLINCYTO|CARVYKTI
+GARDASIL9,JEMPERLI,ELAHERE,COMIRNATY,,GARDASIL9|JEMPERLI|ELAHERE
+EFLUELDA,RYBREVANT,PADCEV,WINREVAIR,,EFLUELDA|RYBREVANT|PADCEV
+BRIUMVI,LIBMELDY,DUPIXENT,JEMPERLI,,BRIUMVI|LIBMELDY|DUPIXENT
+CASGEVY,FABHALTA,LONSURF,Système Mi..,,CASGEVY|FABHALTA|LONSURF
+SKYCLARYS,ABRYSVO,CASGEVY,LIFEVEST 40..,,SKYCLARYS|ABRYSVO|CASGEVY
+SHINGRIX,TRODELVY,NUVAXOVID,OMNIPOD 5,,SHINGRIX|TRODELVY|NUVAXOVID
 inavolisib,bérémagène géper..,glofitamab,(nivolumab/iplimu..,,inavolisib|bérémagène géper..|glofitamab
+DM,durvalumab,ivacaftor/tezacaft..,DM,,DM|durvalumab|ivacaftor/tezacaft..
+amivantamab en a..,blinatumomab,ciltacabtagene aut..,sémaglutide,,amivantamab en a..|blinatumomab|ciltacabtagene aut..
+vaccin papillomavi..,dostarlimab,mirvetuximab sor..,vaccin à ARNm,,vaccin papillomavi..|dostarlimab|mirvetuximab sor..
+Vaccin grippal triv..,amivantamab,enfortumab vedotin,sotatercept,,Vaccin grippal triv..|amivantamab|enfortumab vedotin
+ublituximab,atidarsagène auto..,dupilumab,Dostarlimab,,ublituximab|atidarsagène auto..|dupilumab
+exagamglogene au..,iptacopan,tipiracil/trifluridine,DM,,exagamglogene au..|iptacopan|tipiracil/trifluridine
+omaveloxolone,VACCIN RSVpreF 1..,agamglogene auto..,DM,,omaveloxolone|VACCIN RSVpreF 1..|agamglogene auto..
+Vaccin zona (reco..,sacituzumab govit..,protéine Spike de ..,DM,,Vaccin zona (reco..|sacituzumab govit..|protéine Spike de ..
 Cancer du sein localement avancé ou méta..,Epidermolyse bulleuse dystrophique,Lymphome diffus à grandes cellules B,Cancer colorectal,,Cancer du sein localement avancé ou méta..|Epidermolyse bulleuse dystrophique|Lymphome diffus à grandes cellules B
+Cardiologie interventionnelle,Cancer bronchique à petites cellules de sta..,Mucoviscidose,Sténose aortique sévère symptomatique,,Cardiologie interventionnelle|Cancer bronchique à petites cellules de sta..|Mucoviscidose
+Cancer bronchique non à petites cellules (e..,Leucémie aiguë lymphoblastique (LAL) à pr..,Myélome multiple,Obésité,,Cancer bronchique non à petites cellules (e..|Leucémie aiguë lymphoblastique (LAL) à pr..|Myélome multiple
+Papillomavirus Humains (HPV),Cancer de l’endomètre (CE),Cancer de l'ovaire,COVID-19,,Papillomavirus Humains (HPV)|Cancer de l’endomètre (CE)|Cancer de l'ovaire
+Grippe,Cancer bronchique non à petites cellules (e..,carcinome urothélial,Hypertension artérielle pulmonaire (HTAP),,Grippe|Cancer bronchique non à petites cellules (e..|carcinome urothélial
+Sclérose en plaques récurrente (SEP-R),Leucodystrophie métachromatique chez l’e..,Bronchopneumopathie chronique obstructi..,Cancer de l’endomètre (CE),,Sclérose en plaques récurrente (SEP-R)|Leucodystrophie métachromatique chez l’e..|Bronchopneumopathie chronique obstructi..
+β-thalassémie dépendante des transfusion..,Hémoglobinurie paroxystique nocturne (H..,Cancer colorectal métastatique (CCRm),Diabète de type 1,,β-thalassémie dépendante des transfusion..|Hémoglobinurie paroxystique nocturne (H..|Cancer colorectal métastatique (CCRm)
+Ataxie de Friedreich (AF),Maladie des voies respiratoires inférieures..,Drépanocytose sévère,Pathologies cardiaques entrainant une FE..,,Ataxie de Friedreich (AF)|Maladie des voies respiratoires inférieures..|Drépanocytose sévère
+Zona et névralgies post-zostériennes (NPZ),Cancer du sein (RH+/HER2-) non résécable ..,COVID-19,Diabète de type 1,,Zona et névralgies post-zostériennes (NPZ)|Cancer du sein (RH+/HER2-) non résécable ..|COVID-19
 Feb 2026,Feb 2026,Jan 2026,Jan 2026,,Feb 2026|Feb 2026|Jan 2026
+Dec 2025,Nov 2025,Nov 2025,Nov 2025,,Dec 2025|Nov 2025|Nov 2025
+Nov 2025,Oct 2025,Sep 2025,Jul 2025,,Nov 2025|Oct 2025|Sep 2025
+Jul 2025,Jul 2025,Jun 2025,May 2025,,Jul 2025|Jul 2025|Jun 2025
+Apr 2025,Apr 2025,Mar 2025,Mar 2025,,Apr 2025|Apr 2025|Mar 2025
+Feb 2025,Feb 2025,Jan 2025,Jan 2025,,Feb 2025|Feb 2025|Jan 2025
+Dec 2024,Dec 2024,Oct 2024,Oct 2024,,Dec 2024|Dec 2024|Oct 2024
+Sep 2024,Jul 2024,Jul 2024,Jun 2024,,Sep 2024|Jul 2024|Jul 2024
+May 2024,Apr 2024,Apr 2024,Mar 2024,,May 2024|Apr 2024|Apr 2024
