@@ -26,9 +26,9 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: Install dependencies
-      run: |
-        pip install pandas requests tableau-scraper
+     - name: Install dependencies
+       run: |
+        pip install pandas requests tableau_scraper
 
     - name: Run monitor
       env:
