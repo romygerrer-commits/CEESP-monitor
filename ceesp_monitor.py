@@ -3,9 +3,8 @@ import time
 import pandas as pd
 import requests
 
-from io import StringIO
-
 from selenium import webdriver
+from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 
 
@@ -14,23 +13,9 @@ TABLEAU_URL = (
     "Contributionpatient/Tableaudebord5?:showVizHome=no"
 )
 
-CSV_BASE = (
-    "https://public.tableau.com/views/"
-    "Contributionpatient/Tableaudebord5/"
-)
-
 TEAMS_WEBHOOK = os.environ["TEAMS_WEBHOOK"]
 
 HISTORY_FILE = "history.csv"
-
-
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/122.0.0.0 Safari/537.36"
-    )
-}
 
 
 def normalize_col(col):
@@ -72,9 +57,9 @@ def format_date_fr(value):
     return normalize_text(value)
 
 
-def initialize_tableau():
+def load_data():
 
-    print("Initializing Tableau session...")
+    print("Launching Chrome...")
 
     chrome_options = Options()
 
@@ -91,151 +76,107 @@ def initialize_tableau():
     )
 
     chrome_options.add_argument(
-        "--disable-gpu"
+        "--window-size=1920,1080"
     )
 
-    chrome_options.add_argument(
-        "--window-size=1920,1080"
+    prefs = {
+        "download.prompt_for_download": False
+    }
+
+    chrome_options.add_experimental_option(
+        "prefs",
+        prefs
     )
 
     driver = webdriver.Chrome(
         options=chrome_options
     )
 
+    print("Opening Tableau dashboard...")
+
     driver.get(TABLEAU_URL)
 
-    time.sleep(10)
+    time.sleep(15)
 
-    cookies = driver.get_cookies()
-
-    driver.quit()
-
-    session = requests.Session()
-
-    session.headers.update(HEADERS)
-
-    for cookie in cookies:
-
-        session.cookies.set(
-            cookie["name"],
-            cookie["value"]
-        )
-
-    return session
-
-
-def load_data():
-
-    session = initialize_tableau()
-
-    print("Opening dashboard page...")
-
-    page = session.get(
-        TABLEAU_URL,
-        timeout=60
+    tables = driver.find_elements(
+        By.TAG_NAME,
+        "table"
     )
 
-    page.raise_for_status()
+    if not tables:
 
-    possible_sheets = [
+        driver.quit()
 
-        "Tableaudebord5",
+        raise Exception(
+            "No HTML tables found "
+            "on Tableau dashboard"
+        )
 
-        "Feuil1",
+    print(
+        f"{len(tables)} HTML tables found"
+    )
 
-        "Sheet1",
+    target_df = None
 
-        "Dashboard",
-
-        "Tableau de bord",
-
-        "Feuille 1",
-
-        "Sheet 1"
-    ]
-
-    for sheet in possible_sheets:
+    for i, table in enumerate(tables):
 
         try:
 
-            csv_url = (
-                f"{CSV_BASE}"
-                f"{sheet}.csv"
-                "?:showVizHome=no"
+            html = table.get_attribute(
+                "outerHTML"
             )
 
-            print(
-                f"Trying CSV URL: "
-                f"{csv_url}"
-            )
+            dfs = pd.read_html(html)
 
-            response = session.get(
-                csv_url,
-                timeout=60
-            )
-
-            if response.status_code != 200:
-
-                print(
-                    f"Status code: "
-                    f"{response.status_code}"
-                )
+            if not dfs:
 
                 continue
 
-            if "<html" in response.text.lower():
-
-                print(
-                    "Received HTML instead "
-                    "of CSV"
-                )
-
-                continue
-
-            if len(response.text) < 100:
-
-                print("CSV response too short")
-
-                continue
-
-            df = pd.read_csv(
-                StringIO(response.text)
-            )
-
-            if len(df.columns) < 2:
-
-                print(
-                    "Not enough columns"
-                )
-
-                continue
+            df = dfs[0]
 
             df.columns = [
                 normalize_col(c)
                 for c in df.columns
             ]
 
-            print(
-                f"SUCCESS with worksheet: "
-                f"{sheet}"
-            )
+            cols = df.columns.tolist()
 
-            print(
-                f"{len(df)} rows loaded"
-            )
+            print(f"Table {i} columns:")
+            print(cols)
 
-            return df
+            if any(
+                "nom commercial" in c
+                for c in cols
+            ):
+
+                target_df = df
+
+                print(
+                    f"Using table {i}"
+                )
+
+                break
 
         except Exception as e:
 
             print(
-                f"Failed worksheet "
-                f"{sheet}: {e}"
+                f"Error parsing table "
+                f"{i}: {e}"
             )
 
-    raise Exception(
-        "Could not download Tableau CSV"
+    driver.quit()
+
+    if target_df is None:
+
+        raise Exception(
+            "Could not find CEESP table"
+        )
+
+    print(
+        f"{len(target_df)} rows loaded"
     )
+
+    return target_df
 
 
 def detect_columns(df):
@@ -284,15 +225,10 @@ def detect_columns(df):
 
         if req not in col_map:
 
-            print(df.columns.tolist())
-
             raise Exception(
                 f"Missing required column: "
                 f"{req}"
             )
-
-    print("Detected columns:")
-    print(col_map)
 
     return col_map
 
@@ -365,12 +301,6 @@ def send_teams(rows, col_map):
             )
 
         text += "\n"
-
-    text += (
-        "🔎 Tableau de bord complet :\n"
-        "https://public.tableau.com/views/"
-        "Contributionpatient/Tableaudebord5\n"
-    )
 
     payload = {
         "text": text
