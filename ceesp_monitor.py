@@ -1,6 +1,7 @@
 import os
 import re
 import time
+import json
 import pandas as pd
 import requests
 
@@ -78,6 +79,10 @@ def load_data():
     )
 
     chrome_options.add_argument(
+        "--disable-gpu"
+    )
+
+    chrome_options.add_argument(
         "--window-size=1920,1080"
     )
 
@@ -89,34 +94,71 @@ def load_data():
 
     driver.get(TABLEAU_URL)
 
-    time.sleep(15)
+    time.sleep(20)
 
-    page_source = driver.page_source
+    logs = driver.get_log("performance")
 
-    session_match = re.search(
-        r'bootstrapSession\\/sessions\\/([^"]+)',
-        page_source
-    )
+    session_id = None
 
-    if not session_match:
+    for entry in logs:
 
-        driver.quit()
+        try:
+
+            message = json.loads(
+                entry["message"]
+            )["message"]
+
+            if (
+                message["method"]
+                == "Network.requestWillBeSent"
+            ):
+
+                url = message["params"][
+                    "request"
+                ]["url"]
+
+                if (
+                    "bootstrapSession/sessions/"
+                    in url
+                ):
+
+                    match = re.search(
+                        r"sessions/([^/]+)",
+                        url
+                    )
+
+                    if match:
+
+                        session_id = (
+                            match.group(1)
+                        )
+
+                        print(
+                            f"Session ID found: "
+                            f"{session_id}"
+                        )
+
+                        break
+
+        except Exception:
+
+            pass
+
+    driver.quit()
+
+    if not session_id:
 
         raise Exception(
             "Could not find Tableau session ID"
         )
 
-    session_id = session_match.group(1)
-
-    print(f"Session ID: {session_id}")
-
-    driver.quit()
-
-    bootstrap_url = (
+    csv_url = (
         "https://public.tableau.com"
         "/vizql/w/Contributionpatient"
-        "/v/Tableaudebord5/"
-        f"bootstrapSession/sessions/{session_id}"
+        "/v/Tableaudebord5"
+        f"/bootstrapSession/sessions/"
+        f"{session_id}"
+        "/commands/tabdoc/getCsv"
     )
 
     headers = {
@@ -127,53 +169,30 @@ def load_data():
         "Accept": "*/*"
     }
 
-    payload = {
-        "sheet_id": "Tableaudebord5"
-    }
-
-    print("Requesting Tableau bootstrap session...")
+    print("Downloading CSV...")
 
     response = requests.post(
-        bootstrap_url,
-        headers=headers,
-        data=payload,
-        timeout=60
-    )
-
-    response.raise_for_status()
-
-    csv_url = (
-        "https://public.tableau.com"
-        "/vizql/w/Contributionpatient"
-        "/v/Tableaudebord5/"
-        f"bootstrapSession/sessions/{session_id}"
-        "/commands/tabdoc/getCsv"
-    )
-
-    print("Downloading CSV data...")
-
-    csv_response = requests.post(
         csv_url,
         headers=headers,
         timeout=60
     )
 
-    csv_response.raise_for_status()
+    response.raise_for_status()
 
-    if len(csv_response.text) < 100:
-
-        raise Exception(
-            "CSV response too short"
-        )
-
-    if "<html" in csv_response.text.lower():
+    if "<html" in response.text.lower():
 
         raise Exception(
             "Received HTML instead of CSV"
         )
 
+    if len(response.text) < 100:
+
+        raise Exception(
+            "CSV response too short"
+        )
+
     df = pd.read_csv(
-        StringIO(csv_response.text)
+        StringIO(response.text)
     )
 
     df.columns = [
