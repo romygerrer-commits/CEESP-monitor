@@ -101,7 +101,9 @@ def extract_visible_lines(driver):
         "validation",
         "pathologie",
         "view on tableau public",
-        "share"
+        "share",
+        "filter",
+        "filtrer"
 
     ]
 
@@ -125,59 +127,65 @@ def extract_visible_lines(driver):
 
 def rebuild_rows(lines):
 
-    date_lines = [
-
-        x for x in lines
-        if is_date_line(x)
-    ]
-
-    n_rows = len(date_lines)
-
-    if n_rows == 0:
-
-        return []
-
-    col_nom = lines[0:n_rows]
-
-    col_dci = lines[
-        n_rows:n_rows * 2
-    ]
-
-    col_indication = lines[
-        n_rows * 2:n_rows * 3
-    ]
-
-    col_date = lines[
-        n_rows * 3:n_rows * 4
-    ]
-
     rows = []
 
-    for i in range(n_rows):
+    current = []
 
-        try:
+    for line in lines:
 
-            rows.append({
+        current.append(line)
 
-                "nom commercial":
-                    col_nom[i],
+        # Une ligne se termine
+        # lorsqu'on rencontre une date
 
-                "dci":
-                    col_dci[i],
+        if is_date_line(line):
 
-                "indication":
-                    col_indication[i],
+            try:
 
-                "date":
-                    col_date[i],
+                # structure :
+                # nom / dci / indication / date
 
-                "lien":
-                    ""
-            })
+                if len(current) < 4:
 
-        except Exception:
+                    current = []
 
-            pass
+                    continue
+
+                date = current[-1]
+
+                indication = current[-2]
+
+                dci = current[-3]
+
+                nom_parts = current[:-3]
+
+                nom = " ".join(
+                    nom_parts
+                )
+
+                rows.append({
+
+                    "nom commercial":
+                        nom,
+
+                    "dci":
+                        dci,
+
+                    "indication":
+                        indication,
+
+                    "date":
+                        date,
+
+                    "lien":
+                        ""
+                })
+
+            except Exception:
+
+                pass
+
+            current = []
 
     return rows
 
@@ -364,7 +372,7 @@ def load_data():
             "No rows reconstructed"
         )
 
-    # final deduplication
+    # Déduplication finale
 
     unique_rows = []
 
