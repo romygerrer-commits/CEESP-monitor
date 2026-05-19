@@ -86,6 +86,11 @@ def load_data():
         "--window-size=1920,1080"
     )
 
+    chrome_options.set_capability(
+        "goog:loggingPrefs",
+        {"performance": "ALL"}
+    )
+
     driver = webdriver.Chrome(
         options=chrome_options
     )
@@ -96,7 +101,9 @@ def load_data():
 
     time.sleep(20)
 
-    logs = driver.get_log("performance")
+    logs = driver.get_log(
+        "performance"
+    )
 
     session_id = None
 
@@ -156,7 +163,7 @@ def load_data():
         "https://public.tableau.com"
         "/vizql/w/Contributionpatient"
         "/v/Tableaudebord5"
-        f"/bootstrapSession/sessions/"
+        "/bootstrapSession/sessions/"
         f"{session_id}"
         "/commands/tabdoc/getCsv"
     )
