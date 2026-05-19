@@ -157,27 +157,19 @@ def rebuild_rows(lines):
 
         try:
 
-            nom = col_nom[i]
-
-            dci = col_dci[i]
-
-            indication = col_indication[i]
-
-            date = col_date[i]
-
             rows.append({
 
                 "nom commercial":
-                    nom,
+                    col_nom[i],
 
                 "dci":
-                    dci,
+                    col_dci[i],
 
                 "indication":
-                    indication,
+                    col_indication[i],
 
                 "date":
-                    date,
+                    col_date[i],
 
                 "lien":
                     ""
@@ -188,6 +180,62 @@ def rebuild_rows(lines):
             pass
 
     return rows
+
+
+def scroll_tableau(driver):
+
+    return driver.execute_script(
+        """
+        const els = Array.from(
+            document.querySelectorAll('*')
+        );
+
+        let best = null;
+        let bestHeight = 0;
+
+        for (const el of els) {
+
+            const style =
+                window.getComputedStyle(el);
+
+            const overflowY =
+                style.overflowY;
+
+            const scrollable =
+                (
+                    overflowY === 'auto'
+                    || overflowY === 'scroll'
+                );
+
+            const height =
+                el.scrollHeight;
+
+            if (
+                scrollable &&
+                height > bestHeight &&
+                height > 3000
+            ) {
+
+                best = el;
+                bestHeight = height;
+            }
+        }
+
+        if (!best)
+            return -1;
+
+        const before =
+            best.scrollTop;
+
+        best.scrollTop += 500;
+
+        return {
+            before: before,
+            after: best.scrollTop,
+            max: best.scrollHeight
+        };
+        """
+    )
 
 
 def load_data():
@@ -213,7 +261,7 @@ def load_data():
     )
 
     chrome_options.add_argument(
-        "--window-size=1920,6000"
+        "--window-size=1920,8000"
     )
 
     driver = webdriver.Chrome(
@@ -224,17 +272,21 @@ def load_data():
 
     driver.get(TABLEAU_URL)
 
-    time.sleep(20)
+    time.sleep(25)
 
     all_rows = []
 
     seen = set()
 
-    last_scroll = -1
+    stuck_count = 0
 
-    print("Scrolling Tableau container...")
+    previous_scroll = -1
 
-    for _ in range(300):
+    print(
+        "Scrolling through full Tableau history..."
+    )
+
+    for i in range(500):
 
         lines = extract_visible_lines(
             driver
@@ -259,44 +311,50 @@ def load_data():
                 all_rows.append(row)
 
         print(
+            f"Iteration {i} | "
             f"{len(all_rows)} rows collected"
         )
 
-        current_scroll = driver.execute_script(
-            """
-            const scrollables = Array.from(
-                document.querySelectorAll('*')
-            ).filter(el =>
-                el.scrollHeight > el.clientHeight
-            );
-
-            if (scrollables.length === 0)
-                return 0;
-
-            scrollables.sort(
-                (a, b) =>
-                b.scrollHeight - a.scrollHeight
-            );
-
-            const target = scrollables[0];
-
-            const before = target.scrollTop;
-
-            target.scrollTop += 300;
-
-            return target.scrollTop;
-            """
+        scroll_state = scroll_tableau(
+            driver
         )
 
-        if current_scroll == last_scroll:
+        if scroll_state == -1:
 
-            print("Reached end of table")
+            print(
+                "No scroll container found"
+            )
 
             break
 
-        last_scroll = current_scroll
+        current_scroll = scroll_state[
+            "after"
+        ]
 
-        time.sleep(1)
+        print(
+            f"Scroll position: "
+            f"{current_scroll}"
+        )
+
+        if current_scroll == previous_scroll:
+
+            stuck_count += 1
+
+        else:
+
+            stuck_count = 0
+
+        previous_scroll = current_scroll
+
+        if stuck_count >= 15:
+
+            print(
+                "Reached end of Tableau table"
+            )
+
+            break
+
+        time.sleep(1.5)
 
     driver.quit()
 
