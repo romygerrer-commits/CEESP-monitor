@@ -68,9 +68,9 @@ def format_date_fr(value):
 
 def is_date_line(text):
 
-    for m in MONTHS:
+    for month in MONTHS:
 
-        if text.startswith(m):
+        if text.startswith(month):
 
             return True
 
@@ -135,15 +135,12 @@ def rebuild_rows(lines):
 
         current.append(line)
 
-        # Une ligne se termine
-        # lorsqu'on rencontre une date
+        # une ligne se termine
+        # quand on rencontre une date
 
         if is_date_line(line):
 
             try:
-
-                # structure :
-                # nom / dci / indication / date
 
                 if len(current) < 4:
 
@@ -372,7 +369,7 @@ def load_data():
             "No rows reconstructed"
         )
 
-    # Déduplication finale
+    # déduplication finale
 
     unique_rows = []
 
@@ -532,25 +529,27 @@ def main():
         axis=1
     )
 
+    old_keys = set()
+
     if os.path.exists(HISTORY_FILE):
 
-        old = pd.read_csv(
-            HISTORY_FILE
-        )
+        try:
 
-        if "key" in old.columns:
-
-            old_keys = set(
-                old["key"]
+            old = pd.read_csv(
+                HISTORY_FILE
             )
 
-        else:
+            if "key" in old.columns:
 
-            old_keys = set()
+                old_keys = set(
+                    old["key"]
+                )
 
-    else:
+        except Exception:
 
-        old_keys = set()
+            print(
+                "history.csv empty or invalid"
+            )
 
     new_rows = df[
         ~df["key"].isin(old_keys)
