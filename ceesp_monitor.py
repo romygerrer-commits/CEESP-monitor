@@ -5,8 +5,6 @@ import json
 import pandas as pd
 import requests
 
-from io import StringIO
-
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
@@ -159,13 +157,11 @@ def load_data():
             "Could not find Tableau session ID"
         )
 
-    csv_url = (
+    data_url = (
         "https://public.tableau.com"
         "/vizql/w/Contributionpatient"
         "/v/Tableaudebord5"
-        "/bootstrapSession/sessions/"
-        f"{session_id}"
-        "/commands/tabdoc/getCsv"
+        f"/viewData/sessions/{session_id}"
     )
 
     headers = {
@@ -173,33 +169,33 @@ def load_data():
             "Mozilla/5.0"
         ),
         "Referer": TABLEAU_URL,
-        "Accept": "*/*"
+        "Accept": "application/json"
     }
 
-    print("Downloading CSV...")
+    print("Downloading Tableau data...")
 
-    response = requests.post(
-        csv_url,
+    response = requests.get(
+        data_url,
         headers=headers,
         timeout=60
     )
 
     response.raise_for_status()
 
-    if "<html" in response.text.lower():
+    data = response.json()
+
+    print("JSON keys:")
+    print(data.keys())
+
+    if "data" not in data:
 
         raise Exception(
-            "Received HTML instead of CSV"
+            "No data field returned "
+            "by Tableau"
         )
 
-    if len(response.text) < 100:
-
-        raise Exception(
-            "CSV response too short"
-        )
-
-    df = pd.read_csv(
-        StringIO(response.text)
+    df = pd.DataFrame(
+        data["data"]
     )
 
     df.columns = [
