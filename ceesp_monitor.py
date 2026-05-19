@@ -55,7 +55,10 @@ def load_data():
 
     ts = TS()
 
-    ts.loads(TABLEAU_URL)
+    ts.loads(
+        "https://public.tableau.com/views/"
+        "Contributionpatient/Tableaudebord5?:showVizHome=no"
+    )
 
     workbook = ts.getWorkbook()
 
@@ -64,11 +67,11 @@ def load_data():
     print("Available worksheets:")
     print(worksheet_names)
 
+    target_ws = None
+
     for ws_name in worksheet_names:
 
         try:
-
-            print(f"Trying worksheet: {ws_name}")
 
             ws = workbook.getWorksheet(ws_name)
 
@@ -77,15 +80,45 @@ def load_data():
             if df.empty:
                 continue
 
-            cols = [normalize_col(c) for c in df.columns]
+            cols = [
+                normalize_col(c)
+                for c in df.columns
+            ]
 
-            if any("nom commercial" in c for c in cols):
+            print(f"Worksheet {ws_name}:")
+            print(cols)
 
-                df.columns = cols
+            if any(
+                "nom commercial" in c
+                for c in cols
+            ):
 
-                print(f"Using worksheet: {ws_name}")
+                target_ws = ws_name
+                break
 
-                return df
+        except Exception as e:
+
+            print(f"Error with worksheet {ws_name}: {e}")
+
+    if target_ws is None:
+
+        raise Exception(
+            "Could not find worksheet "
+            "containing CEESP data"
+        )
+
+    print(f"Using worksheet: {target_ws}")
+
+    ws = workbook.getWorksheet(target_ws)
+
+    df = ws.data
+
+    df.columns = [
+        normalize_col(c)
+        for c in df.columns
+    ]
+
+    return df
 
         except Exception as e:
 
