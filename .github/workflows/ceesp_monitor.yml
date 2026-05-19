@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas requests tableau-scraper
+          pip install pandas requests git+https://github.com/bertrandmartel/tableau-scraping.git
 
       - name: Run script
         env:
