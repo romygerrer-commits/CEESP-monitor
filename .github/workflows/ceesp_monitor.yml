@@ -28,7 +28,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install pandas requests tableau_scraper
+        pip install pandas requests TableauScraper
 
     - name: Run monitor
       env:
