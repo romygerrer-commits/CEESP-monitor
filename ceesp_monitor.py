@@ -118,64 +118,85 @@ def load_data():
         f"{len(lines)} text lines found"
     )
 
+    start_idx = None
+
+    for idx, line in enumerate(lines):
+
+        if (
+
+            "Nom co"
+            in line
+
+            or "nom commercial"
+            in line.lower()
+
+        ):
+
+            start_idx = idx + 1
+
+            break
+
+    if start_idx is None:
+
+        raise Exception(
+            "Could not find table header"
+        )
+
+    data_lines = lines[start_idx:]
+
     rows = []
 
-    i = 0
+    chunk_size = 4
 
-    while i < len(lines) - 3:
+    for i in range(
+        0,
+        len(data_lines),
+        chunk_size
+    ):
 
-        try:
+        chunk = data_lines[
+            i:i + chunk_size
+        ]
 
-            nom = lines[i]
+        if len(chunk) < 4:
 
-            dci = lines[i + 1]
+            continue
 
-            indication = lines[i + 2]
+        nom = chunk[0]
 
-            date = ""
+        dci = chunk[1]
 
-            if re.search(
-                r"\d{2}/\d{2}/\d{4}",
-                lines[i + 3]
-            ):
+        indication = chunk[2]
 
-                date = lines[i + 3]
+        date = chunk[3]
 
-                i += 1
+        if (
 
-            if (
+            len(nom) < 2
 
-                len(nom) > 2
+            or len(dci) < 2
 
-                and len(dci) > 2
+        ):
 
-                and len(indication) > 5
+            continue
 
-            ):
+        rows.append({
 
-                rows.append({
+            "nom commercial":
+                nom,
 
-                    "nom commercial":
-                        nom,
+            "dci":
+                dci,
 
-                    "dci":
-                        dci,
+            "indication":
+                indication,
 
-                    "indication":
-                        indication,
+            "date":
+                date,
 
-                    "date":
-                        date,
-
-                    "lien":
-                        ""
-                })
-
-            i += 3
-
-        except Exception:
-
-            i += 1
+            "lien":
+                ""
+        })
 
     if not rows:
 
@@ -193,6 +214,8 @@ def load_data():
     print(
         f"{len(df)} rows loaded"
     )
+
+    print(df.head())
 
     return df
 
@@ -344,26 +367,6 @@ def send_teams(rows, col_map):
                 f"• Date de validation : "
                 f"{format_date_fr(row[col_map['date']])}\n\n"
             )
-
-        if (
-
-            "lien" in col_map
-
-            and pd.notna(
-                row[col_map["lien"]]
-            )
-
-        ):
-
-            link = normalize_text(
-                row[col_map["lien"]]
-            )
-
-            if link:
-
-                text += (
-                    f"• Lien : {link}\n\n"
-                )
 
         text += "\n"
 
