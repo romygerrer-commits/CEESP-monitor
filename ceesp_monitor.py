@@ -1,7 +1,9 @@
+import os
 import pandas as pd
 import requests
-import os
+
 from tableauscraper import TableauScraper as TS
+
 
 TABLEAU_URL = (
     "https://public.tableau.com/views/"
@@ -44,6 +46,7 @@ def format_date_fr(value):
             return date_obj.strftime("%d/%m/%Y")
 
     except Exception:
+
         pass
 
     return normalize_text(value)
@@ -55,10 +58,7 @@ def load_data():
 
     ts = TS()
 
-    ts.loads(
-        "https://public.tableau.com/views/"
-        "Contributionpatient/Tableaudebord5?:showVizHome=no"
-    )
+    ts.loads(TABLEAU_URL)
 
     workbook = ts.getWorkbook()
 
@@ -73,11 +73,15 @@ def load_data():
 
         try:
 
+            print(f"Trying worksheet: {ws_name}")
+
             ws = workbook.getWorksheet(ws_name)
 
             df = ws.data
 
             if df.empty:
+
+                print("Worksheet empty")
                 continue
 
             cols = [
@@ -85,7 +89,7 @@ def load_data():
                 for c in df.columns
             ]
 
-            print(f"Worksheet {ws_name}:")
+            print(f"Columns found in {ws_name}:")
             print(cols)
 
             if any(
@@ -94,11 +98,20 @@ def load_data():
             ):
 
                 target_ws = ws_name
+
+                print(
+                    f"Target worksheet found: "
+                    f"{target_ws}"
+                )
+
                 break
 
         except Exception as e:
 
-            print(f"Error with worksheet {ws_name}: {e}")
+            print(
+                f"Error reading worksheet "
+                f"{ws_name}: {e}"
+            )
 
     if target_ws is None:
 
@@ -106,8 +119,6 @@ def load_data():
             "Could not find worksheet "
             "containing CEESP data"
         )
-
-    print(f"Using worksheet: {target_ws}")
 
     ws = workbook.getWorksheet(target_ws)
 
@@ -118,13 +129,9 @@ def load_data():
         for c in df.columns
     ]
 
+    print(f"{len(df)} rows loaded")
+
     return df
-
-        except Exception as e:
-
-            print(f"Error reading worksheet {ws_name}: {e}")
-
-    raise Exception("Could not find CEESP worksheet")
 
 
 def detect_columns(df):
@@ -138,8 +145,8 @@ def detect_columns(df):
             col_map["nom"] = col
 
         elif (
-            "commune internationale" in col or
-            "dci" in col
+            "commune internationale" in col
+            or "dci" in col
         ):
 
             col_map["dci"] = col
@@ -149,26 +156,36 @@ def detect_columns(df):
             col_map["indication"] = col
 
         elif (
-            "validation" in col or
-            "date" in col
+            "validation" in col
+            or "date" in col
         ):
 
             col_map["date"] = col
 
-        elif "lien" in col or "link" in col:
+        elif (
+            "lien" in col
+            or "link" in col
+            or "url" in col
+        ):
 
             col_map["lien"] = col
 
-    required = ["nom", "dci", "indication"]
+    required = [
+        "nom",
+        "dci",
+        "indication"
+    ]
 
-    for r in required:
+    for req in required:
 
-        if r not in col_map:
+        if req not in col_map:
 
             print("Columns available:")
             print(df.columns.tolist())
 
-            raise Exception(f"Missing required column: {r}")
+            raise Exception(
+                f"Missing required column: {req}"
+            )
 
     print("Detected columns:")
     print(col_map)
@@ -179,15 +196,24 @@ def detect_columns(df):
 def make_key(row, col_map):
 
     return (
-        normalize_text(row[col_map["nom"]]) + "|" +
-        normalize_text(row[col_map["dci"]]) + "|" +
-        normalize_text(row[col_map["indication"]])
+        normalize_text(
+            row[col_map["nom"]]
+        )
+        + "|"
+        + normalize_text(
+            row[col_map["dci"]]
+        )
+        + "|"
+        + normalize_text(
+            row[col_map["indication"]]
+        )
     )
 
 
 def send_teams(rows, col_map):
 
     if rows.empty:
+
         return
 
     count = len(rows)
@@ -206,22 +232,24 @@ def send_teams(rows, col_map):
             "1 nouvel avis publié\n\n"
         )
 
-    for _, r in rows.iterrows():
+    for _, row in rows.iterrows():
 
         text += "\n\u200b\n"
 
         nom = normalize_text(
-            r[col_map["nom"]]
+            row[col_map["nom"]]
         ).upper()
 
         if (
-            "lien" in col_map and
-            pd.notna(r[col_map["lien"]]) and
-            normalize_text(r[col_map["lien"]]) != ""
+            "lien" in col_map
+            and pd.notna(row[col_map["lien"]])
+            and normalize_text(
+                row[col_map["lien"]]
+            ) != ""
         ):
 
             url = normalize_text(
-                r[col_map["lien"]]
+                row[col_map["lien"]]
             )
 
             text += f"💊 [{nom}]({url})\n\n"
@@ -232,18 +260,18 @@ def send_teams(rows, col_map):
 
         text += (
             f"• DCI : "
-            f"{normalize_text(r[col_map['dci']])}\n\n"
+            f"{normalize_text(row[col_map['dci']])}\n\n"
         )
 
         text += (
             f"• Indication : "
-            f"{normalize_text(r[col_map['indication']])}\n\n"
+            f"{normalize_text(row[col_map['indication']])}\n\n"
         )
 
         if "date" in col_map:
 
             date_fr = format_date_fr(
-                r[col_map["date"]]
+                row[col_map["date"]]
             )
 
             text += (
@@ -279,22 +307,25 @@ def main():
 
     df = load_data()
 
-    print(f"{len(df)} rows loaded")
-
     col_map = detect_columns(df)
 
     df["key"] = df.apply(
-        lambda r: make_key(r, col_map),
+        lambda row: make_key(
+            row,
+            col_map
+        ),
         axis=1
     )
 
     if os.path.exists(HISTORY_FILE):
 
-        old = pd.read_csv(HISTORY_FILE)
+        old_df = pd.read_csv(HISTORY_FILE)
 
-        if "key" in old.columns:
+        if "key" in old_df.columns:
 
-            old_keys = set(old["key"])
+            old_keys = set(
+                old_df["key"]
+            )
 
         else:
 
@@ -315,7 +346,10 @@ def main():
             f"new CEESP rows detected"
         )
 
-        send_teams(new_rows, col_map)
+        send_teams(
+            new_rows,
+            col_map
+        )
 
     else:
 
