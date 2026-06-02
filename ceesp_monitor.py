@@ -448,22 +448,18 @@ def make_key(row, col_map):
 def send_teams(rows, col_map):
 
     if rows.empty:
-
         return
 
     count = len(rows)
 
     if count > 1:
-
         text = (
-            "🏛️ **Nouveaux avis CEESP détectés**\n\n"
+            "🏛️ Nouveaux avis CEESP détectés\n\n"
             f"{count} nouveaux avis publiés\n\n"
         )
-
     else:
-
         text = (
-            "🏛️ **Nouvel avis CEESP détecté**\n\n"
+            "🏛️ Nouvel avis CEESP détecté\n\n"
             "1 nouvel avis publié\n\n"
         )
 
@@ -473,28 +469,28 @@ def send_teams(rows, col_map):
             row[col_map["nom"]]
         ).upper()
 
-        text += f"💊 {nom}\n\n"
-
+        text += f"💊 {nom}\n"
         text += (
-            f"• DCI : "
-            f"{normalize_text(row[col_map['dci']])}\n\n"
+            f"DCI : "
+            f"{normalize_text(row[col_map['dci']])}\n"
         )
-
         text += (
-            f"• Indication : "
-            f"{normalize_text(row[col_map['indication']])}\n\n"
+            f"Indication : "
+            f"{normalize_text(row[col_map['indication']])}\n"
         )
-
         text += (
-            f"• Date de validation : "
+            f"Date de validation : "
             f"{format_date_fr(row[col_map['date']])}\n\n"
         )
-
-        text += "\n"
 
     payload = {
         "text": text
     }
+
+    print("===== TEAMS DEBUG =====")
+    print(f"Webhook prefix: {TEAMS_WEBHOOK[:80]}")
+    print("Payload:")
+    print(payload)
 
     response = requests.post(
         TEAMS_WEBHOOK,
@@ -502,10 +498,26 @@ def send_teams(rows, col_map):
         timeout=30
     )
 
-    print(f"Status: {response.status_code}")
-    print(response.text)
+    print(
+        f"Teams status code: "
+        f"{response.status_code}"
+    )
+
+    print(
+        f"Teams response headers: "
+        f"{dict(response.headers)}"
+    )
+
+    print(
+        f"Teams response body: "
+        f"{repr(response.text)}"
+    )
 
     response.raise_for_status()
+
+    print(
+        "Teams notification sent successfully"
+    )
 
 
 def main():
@@ -547,11 +559,20 @@ def main():
     new_rows = df[
         ~df["key"].isin(old_keys)
     ]
-
     if not new_rows.empty:
 
         print(
             f"{len(new_rows)} new rows detected"
+        )
+
+        print(
+            new_rows[
+                [
+                    col_map["nom"],
+                    col_map["dci"],
+                    col_map["date"]
+                ]
+            ]
         )
 
         send_teams(
