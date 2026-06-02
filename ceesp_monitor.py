@@ -502,10 +502,10 @@ def send_teams(rows, col_map):
         timeout=30
     )
 
-    print(
-        f"Teams notification sent "
-        f"(status {response.status_code})"
-    )
+    print(f"Status: {response.status_code}")
+    print(response.text)
+
+    response.raise_for_status()
 
 
 def main():
