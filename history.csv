@@ -1,4 +1,5 @@
 nom commercial,dci,indication,date,lien,key
+IMFINZI,durvalumab,Tumeur résécable de la vessie infiltrant le ..,Apr 2026,,IMFINZI|durvalumab|Tumeur résécable de la vessie infiltrant le ..
 VORANIGO,Vorasidenib,Gliomes diffus (astrocytome ou oligodendr..,Feb 2026,,VORANIGO|Vorasidenib|Gliomes diffus (astrocytome ou oligodendr..
 ITOBEVI,inavolisib,Cancer du sein localement avancé ou méta..,Feb 2026,,ITOBEVI|inavolisib|Cancer du sein localement avancé ou méta..
 VYJUVEK,bérémagène géper..,Epidermolyse bulleuse dystrophique,Jan 2026,,VYJUVEK|bérémagène géper..|Epidermolyse bulleuse dystrophique
@@ -33,8 +34,8 @@ ABRYSVO,VACCIN RSVpreF 1..,Maladie des voies respiratoires inférieures..,Jul 20
 CASGEVY,agamglogene auto..,Drépanocytose sévère,Jun 2024,,CASGEVY|agamglogene auto..|Drépanocytose sévère
 LIFEVEST 40..,DM,Zona et névralgies post-zostériennes (NPZ),May 2024,,LIFEVEST 40..|DM|Zona et névralgies post-zostériennes (NPZ)
 SHINGRIX,Vaccin zona (reco..,Cancer du sein (RH+/HER2-) non résécable ..,Apr 2024,,SHINGRIX|Vaccin zona (reco..|Cancer du sein (RH+/HER2-) non résécable ..
+TRODELVY,sacituzumab govit..,Apr 2026,Filter,,TRODELVY|sacituzumab govit..|Apr 2026
 TRODELVY,sacituzumab govit..,COVID-19,Apr 2024,,TRODELVY|sacituzumab govit..|COVID-19
-NUVAXOVID,protéine Spike de ..,Apr 2026,Filter,,NUVAXOVID|protéine Spike de ..|Apr 2026
 NUVAXOVID,protéine Spike de ..,Diabète de type 1,Mar 2024,,NUVAXOVID|protéine Spike de ..|Diabète de type 1
 OMNIPOD 5,DM,Cancer bronchique non à petites cellules,Mar 2024,,OMNIPOD 5|DM|Cancer bronchique non à petites cellules
 OPDIVO,nivolumab,Hémophilie A congénitale sévère,Mar 2024,,OPDIVO|nivolumab|Hémophilie A congénitale sévère
@@ -58,8 +59,8 @@ LYNPARZA,olaparib,Myasthénie Acquise généralisée (MAg),May 2023,,LYNPARZA|ol
 ULTOMIRIS,ravulizumab,Amylose héréditaire à transthyrétine,Apr 2023,,ULTOMIRIS|ravulizumab|Amylose héréditaire à transthyrétine
 AMVUTTRA,vutrisiran,Cancer du sein triple négatif localement av..,Apr 2023,,AMVUTTRA|vutrisiran|Cancer du sein triple négatif localement av..
 KEYTRUDA,pembrolizumab,Myasthénie auto-immune généralisée,Apr 2023,,KEYTRUDA|pembrolizumab|Myasthénie auto-immune généralisée
-VYVGART,efgartigimod alfa,Carcinome à cellules rénales,Mar 2023,,VYVGART|efgartigimod alfa|Carcinome à cellules rénales
-KEYTRUDA,pembrolizumab,Jan 2025,Filter,,KEYTRUDA|pembrolizumab|Jan 2025
+VYVGART,efgartigimod alfa,Feb 2025,Filter,,VYVGART|efgartigimod alfa|Feb 2025
+ZOLGENSMA,onasemnogene ab..,Amyotrophie spinale chez des patients pré..,Nov 2023,,ZOLGENSMA|onasemnogene ab..|Amyotrophie spinale chez des patients pré..
 SPIKEVAX,"élasoméran, élaso..",COVID-19,Oct 2023,,"SPIKEVAX|élasoméran, élaso..|COVID-19"
 EBVALLO,tabelecleucel,Lymphome prolifératif post-transplantatio..,Sep 2023,,EBVALLO|tabelecleucel|Lymphome prolifératif post-transplantatio..
 DUPIXENT,dupilumab,Prurigo nodulaire,Aug 2023,,DUPIXENT|dupilumab|Prurigo nodulaire
@@ -143,7 +144,7 @@ POLIVY,polatuzumab vedo..,Lymphome diffus à grandes cellules B (LDG..,Jul 2020,
 VEKLURY,remdesivir,Maladie à coronavirus 2019 (COVID-19) ch..,Jul 2020,,VEKLURY|remdesivir|Maladie à coronavirus 2019 (COVID-19) ch..
 EFLUELDA,vaccin grippal qua..,Immunisation active des personnes âgées ..,Jun 2020,,EFLUELDA|vaccin grippal qua..|Immunisation active des personnes âgées ..
 DUPIXENT,Dupilumab,Polypose naso-sinusienne sévère insuffisa..,Jun 2020,,DUPIXENT|Dupilumab|Polypose naso-sinusienne sévère insuffisa..
-SYMKEVI,tezacaftor/ivacaft..,"Mucoviscidose, hétérozygotes pour la mut..",Jun 2020,,"SYMKEVI|tezacaftor/ivacaft..|Mucoviscidose, hétérozygotes pour la mut.."
+HEPCLUDEX,isatuximab,Amyotrophie spinale (SMA),Dec 2020,,HEPCLUDEX|isatuximab|Amyotrophie spinale (SMA)
 SARCLISA,onasemnogene ab..,Amylose cardiaque à transthyrétine (ATTR..,Nov 2020,,SARCLISA|onasemnogene ab..|Amylose cardiaque à transthyrétine (ATTR..
 ZOLGENSMA,tafamidis,Cancer du sein (RH+/HER2-) localement av..,Oct 2020,,ZOLGENSMA|tafamidis|Cancer du sein (RH+/HER2-) localement av..
 VYNDAQEL,ribociclib,Maladie du spectre de la neuromyélite opti..,Oct 2020,,VYNDAQEL|ribociclib|Maladie du spectre de la neuromyélite opti..
@@ -177,9 +178,9 @@ ERLEADA,pembrolizumab,Traitement adjuvant du mélanome de stad..,Jul 2019,,ERLEA
 KEYTRUDA,atezolizumab,Cancer bronchique non à petites cellules no..,Jul 2019,,KEYTRUDA|atezolizumab|Cancer bronchique non à petites cellules no..
 TECENTRIQ,enzalutamide,Cancer de la prostate résistant à la castrat..,Jul 2019,,TECENTRIQ|enzalutamide|Cancer de la prostate résistant à la castrat..
 XTANDI,patisiran,Amylose hérédiatire à transthyrétine (hAT..,Jun 2019,,XTANDI|patisiran|Amylose hérédiatire à transthyrétine (hAT..
-ONPATTRO,durvalumab,Cancer bronchique non à petites cellules lo..,May 2019,,ONPATTRO|durvalumab|Cancer bronchique non à petites cellules lo..
-IMFINZI,Myélome multiple en rechute et réfractaire,Dec 2020,Filter,,IMFINZI|Myélome multiple en rechute et réfractaire|Dec 2020
-isatuximab,Amyotrophie spinale (SMA),Dec 2020,Filtrer par motif d'évaluation,,isatuximab|Amyotrophie spinale (SMA)|Dec 2020
+ONPATTRO,Hépatite D,Dec 2020,Filter,,ONPATTRO|Hépatite D|Dec 2020
+bulévirtide,Myélome multiple en rechute et réfractaire,Dec 2020,Filtrer par motif d'évaluation,,bulévirtide|Myélome multiple en rechute et réfractaire|Dec 2020
+ZYNTEGLO,DM,Dispositif médical implantable - Cardiologie,Dec 2019,,ZYNTEGLO|DM|Dispositif médical implantable - Cardiologie
 MITRACLIP ..,DM,Dispositif médical - Orthopédie (infectiolo..,Nov 2019,,MITRACLIP ..|DM|Dispositif médical - Orthopédie (infectiolo..
 AMPLAZER,DM,Splénomégalie ou symptômes liés à la mal..,Oct 2019,,AMPLAZER|DM|Splénomégalie ou symptômes liés à la mal..
 Kit DAC,ruxolitinib,Cancer bronchique non à petites cellules ép..,Oct 2019,,Kit DAC|ruxolitinib|Cancer bronchique non à petites cellules ép..
@@ -214,9 +215,9 @@ OCREVUS SE..,ocrelizumab,Sclérose en Plaques Récurrente (SEP-R),Oct 2018,,OCRE
 SEP-R,atezolizumab,Cancer bronchique non à petites cellules (C..,Oct 2018,,SEP-R|atezolizumab|Cancer bronchique non à petites cellules (C..
 TECENTRIQ,alectinib,Cancer bronchique non à petites cellules (C..,Jul 2018,,TECENTRIQ|alectinib|Cancer bronchique non à petites cellules (C..
 ALECENSA,pembrolizumab,Carcinome urothélial (2e ligne),Jul 2018,,ALECENSA|pembrolizumab|Carcinome urothélial (2e ligne)
+KEYTRUDA,β-thalassémie chez les patients âgés de 12 ..,Feb 2020,Filter,,KEYTRUDA|β-thalassémie chez les patients âgés de 12 ..|Feb 2020
+cellules CD34+ aut..,Dispositif médical implantable - Insuffisan..,Jan 2020,Filtrer par motif d'évaluation,,cellules CD34+ aut..|Dispositif médical implantable - Insuffisan..|Jan 2020
 KEYTRUDA,niraparib,Cancer épithélial séreux de haut grade de l'..,Jul 2018,,KEYTRUDA|niraparib|Cancer épithélial séreux de haut grade de l'..
-ZEJULA,Dispositif médical implantable - Insuffisan..,Jan 2020,Filter,,ZEJULA|Dispositif médical implantable - Insuffisan..|Jan 2020
-DM,Dispositif médical implantable - Cardiologie,Dec 2019,Filtrer par motif d'évaluation,,DM|Dispositif médical implantable - Cardiologie|Dec 2019
 ZEJULA,abiraterone,Cancer métastatique de la prostate hormo..,Jul 2018,,ZEJULA|abiraterone|Cancer métastatique de la prostate hormo..
 ZYTIGA,dupilumab,Dermatite atopique modérée à sévère,May 2018,,ZYTIGA|dupilumab|Dermatite atopique modérée à sévère
 DUPIXENT,ribociclib,Cancer du sein (RH+/HER2-) localement av..,May 2018,,DUPIXENT|ribociclib|Cancer du sein (RH+/HER2-) localement av..
@@ -240,9 +241,9 @@ IBRANCE,vénétoclax,Leucémie lymphoïde chronique,Jun 2017,,IBRANCE|vénétocl
 VENCLYXTO,obinutuzumab,Lymphome folliculaire,May 2017,,VENCLYXTO|obinutuzumab|Lymphome folliculaire
 GAZYVARO,pembrolizumab,Cancer bronchique non à petites cellules (C..,May 2017,,GAZYVARO|pembrolizumab|Cancer bronchique non à petites cellules (C..
 KEYTRUDA,idelalisib,Leucémie lymphoïde chronique (2ème ligne..,May 2017,,KEYTRUDA|idelalisib|Leucémie lymphoïde chronique (2ème ligne..
-ZYDELIG,DM,Stimulateur cardiaque,Apr 2017,,ZYDELIG|DM|Stimulateur cardiaque
-OPTIMIZER,Lymphome diffus à grandes cellules B et ly..,Jan 2019,Filter,,OPTIMIZER|Lymphome diffus à grandes cellules B et ly..|Jan 2019
-axicabtagene cilol..,Valve aortique implantée par voie transart..,Dec 2018,Filtrer par motif d'évaluation,,axicabtagene cilol..|Valve aortique implantée par voie transart..|Dec 2018
+ZYDELIG,Diabète de type 2,Jan 2019,Filter,,ZYDELIG|Diabète de type 2|Jan 2019
+liraglutide,Lymphome diffus à grandes cellules B et ly..,Jan 2019,Filtrer par motif d'évaluation,,liraglutide|Lymphome diffus à grandes cellules B et ly..|Jan 2019
+ILARIS,canakinumab,Fièvres récurrentes héréditaires,Dec 2017,,ILARIS|canakinumab|Fièvres récurrentes héréditaires
 SPINRAZA,nusinersen,Amyotrophie spinale,Dec 2017,,SPINRAZA|nusinersen|Amyotrophie spinale
 OPDIVO,nivolumab,Cancer épidermoïde de la tête et du cou,Nov 2017,,OPDIVO|nivolumab|Cancer épidermoïde de la tête et du cou
 KYPROLIS,carfilzomib,Myélome multiple,Oct 2017,,KYPROLIS|carfilzomib|Myélome multiple
@@ -278,7 +279,7 @@ MEKINIST,trametinib,Mélanome non résécable ou métastatique,Mar 2016,,MEKINIS
 KEYTRUDA,pembrolizumab,Mélanome avancé non résécable ou métast..,Mar 2016,,KEYTRUDA|pembrolizumab|Mélanome avancé non résécable ou métast..
 OPDIVO,nivolumab,Mélanome avancé non résécable ou métast..,Jan 2016,,OPDIVO|nivolumab|Mélanome avancé non résécable ou métast..
 OPDIVO,nivolumab,Cancer bronchique non à petites cellules E..,Dec 2015,,OPDIVO|nivolumab|Cancer bronchique non à petites cellules E..
-REPATHA,evolocumab,Hypercholestérolémie,Dec 2015,,REPATHA|evolocumab|Hypercholestérolémie
+YERVOY,cobimetinib,Leucémie lymphoïde chronique,Jun 2016,,YERVOY|cobimetinib|Leucémie lymphoïde chronique
 COTELLIC,ibrutinib,Myélome multiple (2eme ligne et plus),May 2016,,COTELLIC|ibrutinib|Myélome multiple (2eme ligne et plus)
 IMBRUVICA,carfilzomib,Mucoviscidose,May 2016,,IMBRUVICA|carfilzomib|Mucoviscidose
 KYPROLIS,lumacaftor/ivacaf..,Hypophosphatasie,May 2016,,KYPROLIS|lumacaftor/ivacaf..|Hypophosphatasie
@@ -313,9 +314,9 @@ GAZYVARO,romiplostim,Purpura thrombopénique idiopathique chr..,Feb 2015,,GAZYVA
 NPLATE,toxine botulinique ..,Hyperactivité vésicale,Nov 2014,,NPLATE|toxine botulinique ..|Hyperactivité vésicale
 BOTOX,vedolizumab,"Rectolique hémorragique, maladie Crohn",Nov 2014,,"BOTOX|vedolizumab|Rectolique hémorragique, maladie Crohn"
 ENTYVIO,omalizumab,Urticaire chronique spontanée,Nov 2014,,ENTYVIO|omalizumab|Urticaire chronique spontanée
+XOLAIR,Mélanome avancé,Sep 2016,Filter,,XOLAIR|Mélanome avancé|Sep 2016
+ipilimumab,Mélanome non résécable ou métastatique,Jun 2016,Filtrer par motif d'évaluation,,ipilimumab|Mélanome non résécable ou métastatique|Jun 2016
 XOLAIR,riociguat,Hypertension pulmonaire,Oct 2014,,XOLAIR|riociguat|Hypertension pulmonaire
-ADEMPAS,Mélanome non résécable ou métastatique,Jun 2016,Filter,,ADEMPAS|Mélanome non résécable ou métastatique|Jun 2016
-cobimetinib,Leucémie lymphoïde chronique,Jun 2016,Filtrer par motif d'évaluation,,cobimetinib|Leucémie lymphoïde chronique|Jun 2016
 ADEMPAS,siméprévir,Hépatite C chronique,Oct 2014,,ADEMPAS|siméprévir|Hépatite C chronique
 OLYSIO,_,Vaccin rotavirus,Sep 2014,,OLYSIO|_|Vaccin rotavirus
 ROTATEQ,_,Vaccin rotavirus,Jul 2014,,ROTATEQ|_|Vaccin rotavirus
