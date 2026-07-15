@@ -1,6 +1,8 @@
-import pandas as pd
+from tableau_scraper import TableauScraper
 
-url = "https://public.tableau.com/app/profile/has8400/viz/Contributionpatient/Tableaudebord5.csv"
+ts = TableauScraper()
+ts.loads("https://public.tableau.com/views/Contributionpatient/Tableaudebord5?:showVizHome=no")
 
-df = pd.read_csv(url)
-print(df.head())
+wb = ts.getWorkbook()
+
+print(wb.getWorksheetNames())
