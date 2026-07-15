@@ -1,42 +1,14 @@
-name: CEESP Monitor
+- name: Set up Python
+  uses: actions/setup-python@v5
+  with:
+    python-version: "3.11"
 
-on:
-  schedule:
-    - cron: "0 8 * * *"
-  workflow_dispatch:
+- name: Install dependencies
+  run: |
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
 
-jobs:
-  run-monitor:
-
-    runs-on: ubuntu-latest
-
-    steps:
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pandas requests selenium lxml html5lib
-
-      - name: Run script
-        env:
-          TEAMS_WEBHOOK: ${{ secrets.TEAMS_WEBHOOK }}
-        run: python ceesp_monitor.py
-
-      - name: Commit updated history
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
-
-          git add history.csv
-
-          git diff --cached --quiet || git commit -m "Update history"
-
-          git push
+- name: Run monitor
+  run: python ceesp_monitor.py
+  env:
+    TEAMS_WEBHOOK: ${{ secrets.TEAMS_WEBHOOK }}
