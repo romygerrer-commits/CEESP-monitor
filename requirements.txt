@@ -1,2 +1,3 @@
 pandas
 requests
+tableau_scraper
