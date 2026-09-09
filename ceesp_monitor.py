@@ -18,7 +18,7 @@ TABLEAU_URL = (
 
 HISTORY_FILE = "history.csv"
 
-TEAMS_WEBHOOK_URL = os.environ.get("TEAMS_WEBHOOK_URL")
+TEAMS_WEBHOOK_URL = os.environ.get("TEAMS_WEBHOOK")
 
 TABLEAU_PAGE = (
     "https://public.tableau.com/app/profile/has8400/"
