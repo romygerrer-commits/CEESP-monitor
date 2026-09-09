@@ -30,7 +30,7 @@ jobs:
 
       - name: Vérifier le tableau HAS
         env:
-          TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK }}
         run: python ceesp_monitor.py
 
       - name: Sauvegarder l'historique
