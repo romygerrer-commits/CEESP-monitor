@@ -437,7 +437,7 @@ def send_teams_message(
 
                         {
                             "type": "TextBlock",
-                            "text": "🆕 Nouvelle contribution patient – CEESP / HAS",
+                            "text": "🆕 Nouvel avis CEESP publié",
                             "weight": "Bolder",
                             "size": "Large",
                             "wrap": True
