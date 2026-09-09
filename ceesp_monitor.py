@@ -10,17 +10,20 @@ import requests
 # CONFIGURATION
 # ============================================================
 
+# URL CSV du tableau Tableau Public HAS
 TABLEAU_URL = (
     "https://public.tableau.com/views/"
     "Contributionpatient/Tableaudebord5.csv"
     "?:showVizHome=no"
 )
 
+# Fichier historique
 HISTORY_FILE = "history.csv"
 
-# Nom du secret GitHub
+# Secret GitHub contenant l'URL du webhook Teams
 TEAMS_WEBHOOK = os.environ.get("TEAMS_WEBHOOK")
 
+# URL du tableau HAS
 TABLEAU_PAGE = (
     "https://public.tableau.com/app/profile/has8400/"
     "viz/Contributionpatient/Tableaudebord5"
@@ -28,11 +31,8 @@ TABLEAU_PAGE = (
 
 
 # ============================================================
-# COLONNES IMPORTANTES
+# COLONNES UTILISÉES POUR IDENTIFIER UNE CONTRIBUTION
 # ============================================================
-
-# Ces 4 informations servent à reconnaître une contribution
-# de manière stable.
 
 IDENTIFIER_COLUMNS = [
     "Dénomination Commune Internationale",
@@ -115,7 +115,7 @@ current.columns = [
 
 
 # ============================================================
-# VÉRIFICATION DES COLONNES
+# VÉRIFICATION DES COLONNES NÉCESSAIRES
 # ============================================================
 
 missing_columns = [
@@ -203,7 +203,7 @@ current["_id"] = current.apply(
 
 
 # ============================================================
-# INITIALISATION DE L'HISTORIQUE
+# PREMIER LANCEMENT
 # ============================================================
 
 if (
@@ -223,9 +223,6 @@ if (
     print(
         "Création de l'historique initial..."
     )
-
-    # On ne conserve que les informations utiles
-    # dans history.csv.
 
     history_columns = [
         "_id",
@@ -312,14 +309,14 @@ except Exception as error:
 
 
 # ============================================================
-# NETTOYAGE DE L'ANCIEN HISTORIQUE
+# NETTOYAGE DE L'HISTORIQUE
 # ============================================================
 
-previous = previous.fillna("")
+previous = previous.fillna()
 
 
 # ============================================================
-# SI L'ANCIEN HISTORY N'A PAS DE _id
+# SI L'HISTORIQUE N'A PAS D'IDENTIFIANT
 # ============================================================
 
 if "_id" not in previous.columns:
@@ -348,7 +345,7 @@ if "_id" not in previous.columns:
 
 
 # ============================================================
-# SUPPRESSION DES DOUBLONS DANS L'HISTORIQUE
+# SUPPRESSION DES DOUBLONS DE L'HISTORIQUE
 # ============================================================
 
 previous = previous.drop_duplicates(
@@ -397,18 +394,113 @@ print(
 # FONCTION D'ENVOI TEAMS
 # ============================================================
 
-def send_teams_message(message):
+def send_teams_message(
+    medication_name,
+    dci,
+    indication,
+    link
+):
+
+    # --------------------------------------------------------
+    # Sécurité : valeurs par défaut
+    # --------------------------------------------------------
+
+    if not medication_name:
+        medication_name = dci or "Médicament non renseigné"
+
+    if not dci:
+        dci = "Non renseignée"
+
+    if not indication:
+        indication = "Non renseignée"
+
+    if not link:
+        link = TABLEAU_PAGE
+
+
+    # --------------------------------------------------------
+    # ADAPTIVE CARD TEAMS
+    # --------------------------------------------------------
 
     payload = {
-        "text": message
+        "type": "message",
+        "attachments": [
+            {
+                "contentType": "application/vnd.microsoft.card.adaptive",
+                "contentUrl": None,
+                "content": {
+                    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                    "type": "AdaptiveCard",
+                    "version": "1.2",
+
+                    "body": [
+
+                        {
+                            "type": "TextBlock",
+                            "text": "🆕 Nouvelle contribution patient – CEESP / HAS",
+                            "weight": "Bolder",
+                            "size": "Large",
+                            "wrap": True
+                        },
+
+                        {
+                            "type": "TextBlock",
+                            "text": medication_name,
+                            "weight": "Bolder",
+                            "size": "Medium",
+                            "wrap": True
+                        },
+
+                        {
+                            "type": "TextBlock",
+                            "text": f"DCI : {dci}",
+                            "wrap": True
+                        },
+
+                        {
+                            "type": "TextBlock",
+                            "text": f"Indication : {indication}",
+                            "wrap": True
+                        }
+
+                    ],
+
+                    "actions": [
+
+                        {
+                            "type": "Action.OpenUrl",
+                            "title": "🔗 Voir l'avis HAS",
+                            "url": link
+                        }
+
+                    ]
+                }
+            }
+        ]
     }
+
+
+    # --------------------------------------------------------
+    # ENVOI HTTP
+    # --------------------------------------------------------
 
     try:
 
         response = requests.post(
             TEAMS_WEBHOOK,
             json=payload,
+            headers={
+                "Content-Type": "application/json"
+            },
             timeout=30
+        )
+
+        print(
+            f"Réponse Teams : HTTP {response.status_code}"
+        )
+
+        print(
+            f"Réponse Teams : {response.text}"
         )
 
         response.raise_for_status()
@@ -420,7 +512,7 @@ def send_teams_message(message):
         )
 
     print(
-        "Notification Teams envoyée."
+        "Notification Teams envoyée avec succès."
     )
 
 
@@ -428,119 +520,93 @@ def send_teams_message(message):
 # ENVOI DES NOUVELLES CONTRIBUTIONS
 # ============================================================
 
-for _, row in new_rows.iterrows():
+if len(new_rows) == 0:
 
-    # --------------------------------------------------------
-    # Informations principales
-    # --------------------------------------------------------
-
-    dci = row.get(
-        "Dénomination Commune Internationale",
-        ""
-    )
-
-    indication = row.get(
-        "Indication courte (Pathologie?)",
-        ""
-    )
-
-    commercial = row.get(
-        "Nom commercial",
-        ""
-    )
-
-    link = row.get(
-        "Lien",
-        ""
-    )
-
-
-    # --------------------------------------------------------
-    # Nom du médicament
-    # --------------------------------------------------------
-
-    medication_name = commercial
-
-    if not medication_name:
-
-        medication_name = dci
-
-
-    # --------------------------------------------------------
-    # Certaines colonnes peuvent être présentes dans Tableau
-    # --------------------------------------------------------
-
-    motif = ""
-
-    if "Motif d'évaluation" in row.index:
-
-        motif = row[
-            "Motif d'évaluation"
-        ]
-
-    elif "Motif d'évaluation.1" in row.index:
-
-        motif = row[
-            "Motif d'évaluation.1"
-        ]
-
-
-    validation_date = ""
-
-    if "Validation (date)" in row.index:
-
-        validation_date = row[
-            "Validation (date)"
-        ]
-
-    elif "Validation (date).1" in row.index:
-
-        validation_date = row[
-            "Validation (date).1"
-        ]
-
-
-    # --------------------------------------------------------
-    # Message Teams
-    # --------------------------------------------------------
-
-    message = (
-        "🆕 **Nouvelle contribution patient – CEESP / HAS**\n\n"
-
-        f"💊 **Médicament :** {medication_name}\n\n"
-
-        f"**DCI :** {dci}\n\n"
-
-        f"🩺 **Indication :**\n"
-        f"{indication}\n\n"
-
-        f"📋 **Motif d'évaluation :**\n"
-        f"{motif}\n\n"
-
-        f"📅 **Date de validation :** "
-        f"{validation_date}\n\n"
-
-        f"🔗 **Lien HAS :**\n"
-        f"{link}\n\n"
-
-        f"📊 **Tableau des contributions patients :**\n"
-        f"{TABLEAU_PAGE}"
-    )
-
-
-    print("")
     print(
-        f"Nouvelle contribution détectée : "
-        f"{medication_name}"
+        "Aucune nouvelle contribution."
     )
 
-    send_teams_message(
-        message
-    )
+else:
+
+    for _, row in new_rows.iterrows():
+
+        # ----------------------------------------------------
+        # Récupération des informations
+        # ----------------------------------------------------
+
+        dci = row.get(
+            "Dénomination Commune Internationale",
+            ""
+        )
+
+        indication = row.get(
+            "Indication courte (Pathologie?)",
+            ""
+        )
+
+        commercial = row.get(
+            "Nom commercial",
+            ""
+        )
+
+        link = row.get(
+            "Lien",
+            ""
+        )
+
+
+        # ----------------------------------------------------
+        # Nom du médicament
+        # ----------------------------------------------------
+
+        medication_name = commercial
+
+        if not medication_name:
+
+            medication_name = dci
+
+
+        # ----------------------------------------------------
+        # Logs
+        # ----------------------------------------------------
+
+        print("")
+        print(
+            "Nouvelle contribution détectée : "
+            f"{medication_name}"
+        )
+
+        print(
+            f"DCI : {dci}"
+        )
+
+        print(
+            f"Indication : {indication}"
+        )
+
+        print(
+            f"Lien : {link}"
+        )
+
+        print(
+            "Envoi de la notification Teams..."
+        )
+
+
+        # ----------------------------------------------------
+        # ENVOI TEAMS
+        # ----------------------------------------------------
+
+        send_teams_message(
+            medication_name=medication_name,
+            dci=dci,
+            indication=indication,
+            link=link
+        )
 
 
 # ============================================================
-# MISE À JOUR DE HISTORY.CSV
+# MISE À JOUR DE L'HISTORIQUE
 # ============================================================
 
 history_columns = [
@@ -557,7 +623,7 @@ history = current[
 ].copy()
 
 
-# Suppression de doublons éventuels
+# Suppression des éventuels doublons
 history = history.drop_duplicates(
     subset="_id",
     keep="first"
@@ -588,4 +654,6 @@ print(
     f"Notifications envoyées : {len(new_rows)}"
 )
 
-print("==============================================")
+print(
+    "=============================================="
+)
