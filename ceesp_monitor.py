@@ -312,7 +312,7 @@ except Exception as error:
 # NETTOYAGE DE L'HISTORIQUE
 # ============================================================
 
-previous = previous.fillna()
+previous = previous.fillna("")
 
 
 # ============================================================
