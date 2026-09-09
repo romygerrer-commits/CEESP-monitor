@@ -2,11 +2,11 @@ name: CEESP - Contribution patients
 
 on:
   schedule:
-    # Tous les jours à 09:15, heure de Paris
+    # Une vérification par jour à 09h15 heure française
     - cron: "15 9 * * *"
       timezone: "Europe/Paris"
 
-  # Permet de lancer manuellement le contrôle depuis GitHub
+  # Permet de lancer manuellement le monitoring
   workflow_dispatch:
 
 permissions:
@@ -14,35 +14,72 @@ permissions:
 
 jobs:
   monitor:
+
     runs-on: ubuntu-latest
 
     steps:
+
+      # ------------------------------------------------------
+      # Récupération du repository
+      # ------------------------------------------------------
+
       - name: Récupérer le repository
         uses: actions/checkout@v4
+
+
+      # ------------------------------------------------------
+      # Installation de Python
+      # ------------------------------------------------------
 
       - name: Installer Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
+
+      # ------------------------------------------------------
+      # Installation des dépendances
+      # ------------------------------------------------------
+
       - name: Installer les dépendances
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
+
+
+      # ------------------------------------------------------
+      # Exécution du monitoring
+      # ------------------------------------------------------
 
       - name: Vérifier le tableau HAS
         env:
           TEAMS_WEBHOOK: ${{ secrets.TEAMS_WEBHOOK }}
-        run: python ceesp_monitor.py
+        run: |
+          python ceesp_monitor.py
+
+
+      # ------------------------------------------------------
+      # Sauvegarde de history.csv
+      # ------------------------------------------------------
 
       - name: Sauvegarder l'historique
         run: |
+
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
 
           git add history.csv
 
           if git diff --cached --quiet; then
-            echo "Aucune modification de l'historique."
+
+            echo "Aucune modification de history.csv."
+
           else
-            git commit -m "Update CEESP contribution patients history"
+
+            git commit \
+              -m "Update CEESP contribution patients history"
+
             git push
+
           fi
