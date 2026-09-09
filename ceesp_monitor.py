@@ -18,7 +18,7 @@ TABLEAU_URL = (
 
 HISTORY_FILE = "history.csv"
 
-TEAMS_WEBHOOK_URL = os.environ.get("TEAMS_WEBHOOK")
+TEAMS_WEBHOOK = os.environ.get("TEAMS_WEBHOOK")
 
 TABLEAU_PAGE = (
     "https://public.tableau.com/app/profile/has8400/"
@@ -42,9 +42,9 @@ IDENTIFIER_COLUMNS = [
 # VÉRIFICATION DU WEBHOOK
 # ============================================================
 
-if not TEAMS_WEBHOOK_URL:
+if not TEAMS_WEBHOOK:
     raise RuntimeError(
-        "Le secret TEAMS_WEBHOOK_URL n'est pas configuré dans GitHub."
+        "Le secret TEAMS_WEBHOOK n'est pas configuré dans GitHub."
     )
 
 
@@ -218,7 +218,7 @@ def send_teams(message):
     }
 
     response = requests.post(
-        TEAMS_WEBHOOK_URL,
+        TEAMS_WEBHOOK,
         json=payload,
         timeout=30
     )
