@@ -10,16 +10,20 @@ import requests
 # CONFIGURATION
 # ============================================================
 
+# URL CSV du tableau Tableau Public HAS
 TABLEAU_URL = (
     "https://public.tableau.com/views/"
     "Contributionpatient/Tableaudebord5.csv"
     "?:showVizHome=no"
 )
 
+# Fichier contenant les données déjà connues
 HISTORY_FILE = "history.csv"
 
+# Secret GitHub contenant l'URL du webhook Teams
 TEAMS_WEBHOOK = os.environ.get("TEAMS_WEBHOOK")
 
+# URL du tableau Tableau Public
 TABLEAU_PAGE = (
     "https://public.tableau.com/app/profile/has8400/"
     "viz/Contributionpatient/Tableaudebord5"
@@ -27,7 +31,7 @@ TABLEAU_PAGE = (
 
 
 # ============================================================
-# COLONNES DU CSV UTILISÉES POUR IDENTIFIER UNE CONTRIBUTION
+# COLONNES UTILISÉES POUR IDENTIFIER UNE CONTRIBUTION
 # ============================================================
 
 IDENTIFIER_COLUMNS = [
@@ -49,27 +53,48 @@ if not TEAMS_WEBHOOK:
 
 
 # ============================================================
-# TÉLÉCHARGEMENT DU CSV TABLEAU
+# TÉLÉCHARGEMENT DU TABLEAU TABLEAU PUBLIC
 # ============================================================
 
 print("Téléchargement du tableau HAS...")
 
-response = requests.get(
-    TABLEAU_URL,
-    timeout=60,
-    headers={
-        "User-Agent": "Mozilla/5.0"
-    }
-)
+try:
 
-response.raise_for_status()
+    response = requests.get(
+        TABLEAU_URL,
+        timeout=60,
+        headers={
+            "User-Agent": "Mozilla/5.0"
+        }
+    )
 
-csv_content = response.content.decode("utf-8-sig")
+    response.raise_for_status()
 
-current = pd.read_csv(
-    StringIO(csv_content),
-    dtype=str
-).fillna("")
+except requests.RequestException as e:
+
+    raise RuntimeError(
+        f"Impossible de télécharger le tableau Tableau Public : {e}"
+    )
+
+
+# ============================================================
+# LECTURE DU CSV
+# ============================================================
+
+try:
+
+    csv_content = response.content.decode("utf-8-sig")
+
+    current = pd.read_csv(
+        StringIO(csv_content),
+        dtype=str
+    )
+
+except Exception as e:
+
+    raise RuntimeError(
+        f"Impossible de lire le CSV Tableau Public : {e}"
+    )
 
 
 print(
@@ -80,10 +105,13 @@ print(
 
 
 # ============================================================
-# NETTOYAGE
+# NETTOYAGE DES DONNÉES
 # ============================================================
 
+current = current.fillna("")
+
 for column in current.columns:
+
     current[column] = (
         current[column]
         .astype(str)
@@ -102,29 +130,33 @@ missing_columns = [
 ]
 
 if missing_columns:
+
     raise RuntimeError(
-        "Colonnes manquantes dans le CSV Tableau : "
+        "Les colonnes suivantes sont absentes du CSV Tableau : "
         + ", ".join(missing_columns)
     )
 
 
 # ============================================================
-# IDENTIFIANT UNIQUE
+# CRÉATION D'UN IDENTIFIANT UNIQUE POUR CHAQUE LIGNE
 # ============================================================
 
 def create_id(row):
-    """
-    Crée un identifiant stable pour chaque contribution.
-    """
 
     values = []
 
     for column in IDENTIFIER_COLUMNS:
-        value = str(row[column]).strip().lower()
+
+        value = str(
+            row[column]
+        ).strip().lower()
+
         values.append(value)
 
+    # Création d'une chaîne unique
     raw_id = "|||".join(values)
 
+    # Hash pour obtenir un identifiant stable
     return hashlib.sha256(
         raw_id.encode("utf-8")
     ).hexdigest()
@@ -140,15 +172,22 @@ current["_id"] = current.apply(
 # PREMIER LANCEMENT
 # ============================================================
 
-if not os.path.exists(HISTORY_FILE):
+# Si history.csv n'existe pas ou est vide,
+# on initialise l'historique sans envoyer de notification.
+
+if (
+    not os.path.exists(HISTORY_FILE)
+    or os.path.getsize(HISTORY_FILE) == 0
+):
+
+    print("Premier lancement détecté.")
 
     print(
-        "Premier lancement détecté."
+        f"{len(current)} contributions trouvées."
     )
 
     print(
-        f"{len(current)} contributions enregistrées "
-        "comme historique initial."
+        "Création de l'historique initial..."
     )
 
     current.to_csv(
@@ -158,22 +197,67 @@ if not os.path.exists(HISTORY_FILE):
     )
 
     print(
+        "Historique initial créé."
+    )
+
+    print(
         "Aucune notification Teams envoyée "
         "lors du premier lancement."
+    )
+
+    print(
+        "Monitoring terminé."
     )
 
     exit(0)
 
 
 # ============================================================
-# CHARGEMENT DE L'HISTORIQUE
+# LECTURE DE L'HISTORIQUE
 # ============================================================
 
-previous = pd.read_csv(
-    HISTORY_FILE,
-    dtype=str
-).fillna("")
+try:
 
+    previous = pd.read_csv(
+        HISTORY_FILE,
+        dtype=str
+    ).fillna("")
+
+except pd.errors.EmptyDataError:
+
+    print(
+        "Le fichier history.csv est vide."
+    )
+
+    print(
+        "Initialisation de l'historique..."
+    )
+
+    current.to_csv(
+        HISTORY_FILE,
+        index=False,
+        encoding="utf-8-sig"
+    )
+
+    print(
+        "Aucune notification Teams envoyée."
+    )
+
+    exit(0)
+
+except Exception as e:
+
+    raise RuntimeError(
+        f"Impossible de lire history.csv : {e}"
+    )
+
+
+# ============================================================
+# CRÉATION DE L'IDENTIFIANT DANS L'HISTORIQUE
+# ============================================================
+
+# Si l'ancien history.csv ne contient pas encore "_id",
+# on le recrée automatiquement.
 
 if "_id" not in previous.columns:
 
@@ -187,8 +271,12 @@ if "_id" not in previous.columns:
     )
 
 
+# ============================================================
+# LISTE DES ENTRÉES DÉJÀ CONNUES
+# ============================================================
+
 previous_ids = set(
-    previous["_id"]
+    previous["_id"].astype(str)
 )
 
 
@@ -208,79 +296,161 @@ print(
 
 
 # ============================================================
-# ENVOI DU MESSAGE TEAMS
+# FONCTION D'ENVOI DU MESSAGE TEAMS
 # ============================================================
 
-def send_teams(message):
+def send_teams_message(message):
 
     payload = {
         "text": message
     }
 
-    response = requests.post(
-        TEAMS_WEBHOOK,
-        json=payload,
-        timeout=30
-    )
+    try:
 
-    response.raise_for_status()
+        response = requests.post(
+            TEAMS_WEBHOOK,
+            json=payload,
+            timeout=30
+        )
 
+        response.raise_for_status()
 
-# ============================================================
-# FORMATAGE ET ENVOI DES NOTIFICATIONS
-# ============================================================
+    except requests.RequestException as e:
 
-for _, row in new_rows.iterrows():
-
-    dci = row.get(
-        "Dénomination Commune Internationale",
-        ""
-    )
-
-    indication = row.get(
-        "Indication courte (Pathologie?)",
-        ""
-    )
-
-    commercial = row.get(
-        "Nom commercial",
-        ""
-    )
-
-    validation_date = row.get(
-        "Validation (date)",
-        ""
-    )
-
-    motif = row.get(
-        "Motif d'évaluation",
-        ""
-    )
-
-    link = row.get(
-        "Lien",
-        ""
-    )
-
-
-    message = (
-        "🆕 **Nouvel avis CEESP / HAS**\n\n"
-        f"💊 **Médicament :** {commercial}\n\n"
-        f"**DCI :** {dci}\n\n"
-        f"🩺 **Indication :** {indication}\n\n"
-        f"📅 **Date de validation :** {validation_date}\n\n"
-        f"🔗 **Lien HAS :** {link}\n\n"
-        f"📊 **Tableau des contributions patients :** "
-        f"{TABLEAU_PAGE}"
-    )
-
+        raise RuntimeError(
+            f"Impossible d'envoyer le message Teams : {e}"
+        )
 
     print(
-        f"Envoi de la notification Teams : "
-        f"{commercial}"
+        "Message Teams envoyé avec succès."
     )
 
-    send_teams(message)
+
+# ============================================================
+# ENVOI DES NOTIFICATIONS
+# ============================================================
+
+if len(new_rows) == 0:
+
+    print(
+        "Aucune nouvelle contribution."
+    )
+
+else:
+
+    for _, row in new_rows.iterrows():
+
+        # ----------------------------------------------------
+        # Récupération des informations
+        # ----------------------------------------------------
+
+        dci = row.get(
+            "Dénomination Commune Internationale",
+            ""
+        )
+
+        indication = row.get(
+            "Indication courte (Pathologie?)",
+            ""
+        )
+
+        commercial = row.get(
+            "Nom commercial",
+            ""
+        )
+
+        validation_date = row.get(
+            "Validation (date)",
+            ""
+        )
+
+        motif = row.get(
+            "Motif d'évaluation",
+            ""
+        )
+
+        link = row.get(
+            "Lien",
+            ""
+        )
+
+
+        # ----------------------------------------------------
+        # Si le nom commercial est vide,
+        # on utilise la DCI
+        # ----------------------------------------------------
+
+        medication_name = commercial
+
+        if not medication_name:
+
+            medication_name = dci
+
+
+        # ----------------------------------------------------
+        # Construction du message Teams
+        # ----------------------------------------------------
+
+        message = (
+            "🆕 **Nouvelle contribution patient – CEESP / HAS**\n\n"
+
+            f"💊 **Médicament :** {medication_name}\n\n"
+
+            f"**DCI :** {dci}\n\n"
+
+            f"🩺 **Indication :**\n"
+            f"{indication}\n\n"
+
+            f"📋 **Motif d'évaluation :**\n"
+            f"{motif}\n\n"
+
+            f"📅 **Date de validation :** "
+            f"{validation_date}\n\n"
+
+            f"🔗 **Lien HAS :**\n"
+            f"{link}\n\n"
+
+            f"📊 **Tableau des contributions patients :**\n"
+            f"{TABLEAU_PAGE}"
+        )
+
+
+        # ----------------------------------------------------
+        # Affichage dans les logs
+        # ----------------------------------------------------
+
+        print(
+            "--------------------------------------------------"
+        )
+
+        print(
+            f"Nouvelle contribution : {medication_name}"
+        )
+
+        print(
+            f"DCI : {dci}"
+        )
+
+        print(
+            f"Indication : {indication}"
+        )
+
+        print(
+            f"Date : {validation_date}"
+        )
+
+        print(
+            "Envoi de la notification Teams..."
+        )
+
+
+        # ----------------------------------------------------
+        # Envoi Teams
+        # ----------------------------------------------------
+
+        send_teams_message(
+            message
+        )
 
 
 # ============================================================
@@ -295,9 +465,18 @@ current.to_csv(
 
 
 print(
+    "--------------------------------------------------"
+)
+
+print(
     "Historique mis à jour."
 )
 
 print(
-    "Monitoring terminé."
+    f"Nombre total d'entrées enregistrées : "
+    f"{len(current)}"
+)
+
+print(
+    "Monitoring terminé avec succès."
 )
