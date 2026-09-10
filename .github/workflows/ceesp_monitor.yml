@@ -16,47 +16,23 @@ jobs:
 
     steps:
 
-      # ------------------------------------------------------
-      # Récupération du repository
-      # ------------------------------------------------------
-
       - name: Récupérer le repository
         uses: actions/checkout@v4
-
-
-      # ------------------------------------------------------
-      # Installation de Python
-      # ------------------------------------------------------
 
       - name: Installer Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-
-      # ------------------------------------------------------
-      # Installation des dépendances
-      # ------------------------------------------------------
-
       - name: Installer les dépendances
         run: |
           pip install -r requirements.txt
-
-
-      # ------------------------------------------------------
-      # Exécution du monitoring
-      # ------------------------------------------------------
 
       - name: Vérifier le tableau HAS
         env:
           TEAMS_WEBHOOK: ${{ secrets.TEAMS_WEBHOOK }}
         run: |
           python ceesp_monitor.py
-
-
-      # ------------------------------------------------------
-      # Sauvegarde de history.csv
-      # ------------------------------------------------------
 
       - name: Sauvegarder l'historique
         run: |
