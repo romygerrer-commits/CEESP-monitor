@@ -2,11 +2,8 @@ name: CEESP - Contribution patients
 
 on:
   schedule:
-    # Une vérification par jour à 09h15 heure française
-    - cron: "15 9 * * *"
-      timezone: "Europe/Paris"
+    - cron: "*/5 * * * *"
 
-  # Permet de lancer manuellement le monitoring
   workflow_dispatch:
 
 permissions:
